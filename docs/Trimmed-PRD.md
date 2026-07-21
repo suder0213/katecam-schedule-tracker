@@ -1,6 +1,7 @@
 # 카테캠 주간 트래커 — PRD (결정 반영본)
 
 > Plain-PRD.md(원본) + 검토 코멘트(#1~#22)에 대한 답변을 반영한 최종본. Plain-PRD.md는 원본 그대로 두고 수정하지 않음. 각 변경 지점에는 `(결정 #N)`으로 근거를 남김. 오픈 이슈였던 스케줄러/큐 기술(#8)도 APScheduler로 확정되어 현재 미확정 항목은 없음.
+> 이후 추가 결정: (결정 #23) 운영진 승격 권한을 운영진에게도 확대, (결정 #24) 전 테이블에 `created_at`/`updated_at` 추가.
 
 ## 배경 및 목적
 본 프로젝트는 현재 Discord / Notion에 흩어져 있는 팀 및 개인 일정의 추적 및 완료 상태를 추적하는 웹사이트를 개발하는 프로젝트이다. 일정 웹사이트를 공유함으로써 접근성을 높여 쿠키즈(카테캠 학생)가 일정을 까먹고 수행하지 않는 케이스를 줄이고, 더 체계적으로 계획을 수행하는 것을 보조하는 것을 목표로 한다. **(결정 #1) MVP 단계에서는 개발자가 Discord/Notion을 수동으로 확인해 텍스트로 입력하고, 이후 권한(디스코드 봇/노션 인테그레이션)을 확보하면 자동 크롤링으로 전환한다.**
@@ -16,6 +17,7 @@
 2. 운영진
  - LLM이 놓친 일정이나, 직접적으로 공유 일정(하단에서 설명)을 추가 할 수 있다.
  - 학생의 일정 상황을 한 눈에 확인할 수 있다.
+ - **(결정 #23) 학생 계정을 운영진으로 승격하는 권한을 운영진도 가진다** (기존 결정 #2는 개발자 전용이었으나 확대됨; 단, 개발자 권한 부여는 여전히 DB 직접 조작으로만 가능하고 웹 UI로는 불가).
  - **(결정 #4/#6) 팀을 생성할 수 있다** (팀 생성은 운영진/개발자만 가능).
 3. 학생
  - 해당 웹사이트의 주요 Client이다.
@@ -82,7 +84,7 @@
 - **(결정 #4/#6) 팀을 생성할 수 있다** (예: "OO대-1팀"처럼 이름으로만 구분하며, 학교별로 별도 필드를 두지는 않는다. 팀 생성은 운영진/개발자만 가능).
 - **(결정 #4) 팀 배정(학생을 팀에 넣는 것)은 운영진/개발자/학생 본인 누구나 할 수 있다.**
 - 특정 학생의 일정 상황을 조회할 수 있다.
-- **(결정 #2) 학생 계정을 운영진으로 승격할 수 있는 권한은 개발자만 가진다** (운영진 본인은 다른 계정을 승격 못함).
+- **(결정 #23) 학생 계정을 운영진으로 승격할 수 있는 권한은 운영진과 개발자 모두 가진다** (기존 결정 #2에서 개발자 전용이었던 것을 확대. 단 계정을 개발자로 승격하는 것은 여전히 DB 직접 조작으로만 가능하며 운영진/웹 UI로는 불가).
 
 ### 학생
 - 이메일 인증 후 계정을 생성하여 로그인한다.
@@ -126,20 +128,25 @@ AWS EC2/RDS/S3(필요시 추가)
 
 ## 데이터 모델 (초안)
 
+> **(결정 #24) 아래 모든 테이블에 `created_at: DateTime`, `updated_at: DateTime`을 추가한다** (row 생성/수정 시각 추적 목적, 이번 결정 이전에는 명시되어 있지 않았음). `created_at`은 insert 시 1회만 설정되고 이후 불변, `updated_at`은 insert/update 시마다 갱신. 단 `Team_Member`는 생성/삭제만 있고 수정 개념이 없으므로 `created_at`만 둔다.
+
 ### User
 - user_id: **UUID** (결정 #13/#20)
 - email: str
 - password: str (**bcrypt 해시**, 결정 #12)
 - nick_name: str | None
 - permission: Literal['dev','manager','student']
+- created_at: DateTime, updated_at: DateTime (결정 #24)
 
 ### Team (결정 #14/#15 — 신규 추가, N:M 관계로 확정)
 - team_id: UUID
 - name: str (예: "OO대-1팀" — **결정 #6**: 학교 단위로 필드를 분리하지 않고, 이름 표기로만 구분)
+- created_at: DateTime, updated_at: DateTime (결정 #24)
 
 ### Team_Member (결정 #14/#15 — Team ↔ User N:M 관계)
 - team_id: UUID
 - user_id: UUID
+- created_at: DateTime (결정 #24 — 수정 개념이 없어 updated_at은 두지 않음)
 
 ### ~~Shared_Schedule~~ / ~~Personal_Schedule~~ / ~~Team_Schedule~~ → `Schedule` + `Schedule_Completion`으로 통합 (결정: 개인/공유 일정 로직이 사실상 동일하므로 하나의 테이블로 합치고, 완료 여부는 종류에 상관없이 `Schedule_Completion`으로 일원화. `Team_Schedule`은 앞서 결정대로 개념 자체가 없음, 결정 #3/#4/#7)
 
@@ -150,12 +157,14 @@ AWS EC2/RDS/S3(필요시 추가)
 - contents: str
 - deadline: DateTime
 - student_id: UUID | None (개인 일정이면 소유 학생, 공유 일정이면 `None`)
+- created_at: DateTime, updated_at: DateTime (결정 #24)
 
 ### Schedule_Completion
 - schedule_id: UUID
 - student_id: UUID
 - done: bool
-- updated_at: DateTime
+- created_at: DateTime (결정 #24 — row가 최초 upsert된 시각)
+- updated_at: DateTime (완료 상태가 마지막으로 바뀐 시각)
 
 > `Schedule`에는 완료 상태를 두지 않는다. "학생 X가 일정 Y를 완료했는지"는 오직 `Schedule_Completion`에 (schedule_id, student_id) 로우가 있는지/`done` 값이 무엇인지로 판단한다. 로우가 없으면 기본값 `false`(미완료)로 취급 — 개인 일정을 새로 만들 때도, 공유 일정이 등록됐을 때도 학생별 완료 로우를 미리 만들 필요 없이, 실제로 학생이 상태를 바꿀 때만 upsert하면 됨. 개인 일정은 (schedule_id, student_id=소유자) 로우 하나만 생기고, 공유 일정은 학생 수만큼 로우가 생길 수 있다는 차이뿐, 테이블 구조와 쿼리 방식은 동일하다.
 
