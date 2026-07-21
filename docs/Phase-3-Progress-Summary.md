@@ -31,6 +31,15 @@
 
 3-6 개인 일정 CRUD를 구현하다가 "개인 일정은 학생뿐 아니라 dev/manager도 가질 수 있다"(PRD "0. 공통" 섹션에 이미 명시돼 있었음)는 점이 재확인되면서, `student_id`라는 컬럼명이 실제 의미와 안 맞음을 발견. `Schedule`/`Schedule_Completion` 양쪽 모두 `owner_id`로 리네이밍(모델 + 마이그레이션 + seed + 문서 전부 반영). 단, 3-4의 쿼리 파라미터 `student_id`(달력에서 볼 학생을 지정)는 별개 개념이라 그대로 유지.
 
+### FK에 ON DELETE CASCADE 추가
+
+Phase 3 CRUD를 다 만든 뒤 "CASCADE가 제대로 선언돼 있나?"는 질문에 점검해보니, 모든 FK가 `ondelete` 미지정(기본값 NO ACTION) 상태였음. 실제로 `schedule_completions.schedule_id → schedules.schedule_id`에 CASCADE가 없어서, 완료 기록이 하나라도 있는 일정을 `DELETE /schedules/{id}`로 지우면 `ForeignKeyViolation`으로 500 에러가 나는 게 재현됨(테스트가 전부 완료기록 없는 일정만 삭제해서 못 잡았던 케이스). 논의 후 다음 5개 FK 전부 `ON DELETE CASCADE`로 변경:
+- `schedule_completions.schedule_id → schedules.schedule_id`
+- `team_members.team_id → teams.team_id` (팀 삭제 API는 아직 없지만 미리 선언)
+- `schedules.owner_id`, `team_members.user_id`, `schedule_completions.owner_id` → `users.user_id` (유저 삭제 시 관련 데이터 전부 연쇄 삭제 — `DELETE /users/{id}` API 자체는 아직 계획에 없음)
+
+Postgres는 `ALTER TABLE ... ALTER COLUMN`으로 FK의 `ondelete`만 바꿀 수 없어서, 마이그레이션에서 5개 제약조건을 각각 `DROP CONSTRAINT` 후 같은 이름으로 `ondelete="CASCADE"`를 붙여 재생성. 회귀 테스트(`test_delete_schedule_with_completion_row_cascades`)로 고정.
+
 ## 트러블슈팅
 
 - **컬럼 rename 후 테스트 DB가 stale해지는 문제.** `tests/conftest.py`가 `Base.metadata.create_all()`만 호출하고 있었는데, 이건 없는 테이블만 만들지 이미 존재하는 테이블의 컬럼 변경은 반영하지 않음. `student_id→owner_id` 마이그레이션 직후 스케줄 테스트 전체가 `column schedules.owner_id does not exist` 에러로 실패. `drop_all()` 후 `create_all()`로 변경해 앞으로 모델이 바뀔 때마다 테스트 DB가 항상 최신 스키마로 재생성되도록 수정.
@@ -40,8 +49,8 @@
 
 ## 테스트 현황
 
-- `test_users.py`(11), `test_teams.py`(18), `test_schedules.py`(21), `test_schedules_calendar.py`(10) 신규 추가
-- 기존 `test_auth.py`(19), `test_security.py`(3), `test_rate_limit.py`(3)와 합쳐 총 **85개 테스트 통과**
+- `test_users.py`(11), `test_teams.py`(18), `test_schedules.py`(22), `test_schedules_calendar.py`(10) 신규 추가
+- 기존 `test_auth.py`(19), `test_security.py`(3), `test_rate_limit.py`(3)와 합쳐 총 **86개 테스트 통과**
 - `tests/conftest.py`에 `make_user`(임의 권한의 인증된 유저를 DB에 직접 생성), `auth_header`(그 유저의 access token 헤더 생성), `db_session`(API가 아직 없는 관계를 테스트에서 직접 넣기 위한 raw DB 세션) fixture 추가 — Phase 3 전반에서 재사용
 
 ## 현재 상태

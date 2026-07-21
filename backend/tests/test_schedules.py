@@ -177,6 +177,21 @@ def test_delete_nonexistent_schedule(client, make_user, auth_header):
     assert resp.status_code == 404
 
 
+def test_delete_schedule_with_completion_row_cascades(client, make_user, auth_header):
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+    create_resp = client.post("/schedules", json=_personal_payload(), headers=auth_header(student))
+    schedule_id = create_resp.json()["schedule_id"]
+    client.put(
+        f"/schedules/{schedule_id}/completion",
+        json={"done": True},
+        headers=auth_header(student),
+    )
+
+    resp = client.delete(f"/schedules/{schedule_id}", headers=auth_header(student))
+
+    assert resp.status_code == 204
+
+
 def test_owner_can_complete_own_personal_schedule(client, make_user, auth_header):
     student = make_user("student@katecam.dev", UserPermission.STUDENT)
     create_resp = client.post("/schedules", json=_personal_payload(), headers=auth_header(student))

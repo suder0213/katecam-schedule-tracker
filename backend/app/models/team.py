@@ -22,8 +22,8 @@ class TeamMember(CreatedAtMixin, Base):
     __table_args__ = (UniqueConstraint("team_id", "user_id", name="uq_team_member"),)
 
     team_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("teams.team_id"), primary_key=True
+        UUID(as_uuid=True), ForeignKey("teams.team_id", ondelete="CASCADE"), primary_key=True
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.user_id"), primary_key=True
+        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True
     )

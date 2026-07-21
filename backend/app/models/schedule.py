@@ -28,7 +28,7 @@ class Schedule(TimestampMixin, Base):
     contents: Mapped[str] = mapped_column(String, nullable=False)
     deadline: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     owner_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=True
     )
 
 
@@ -36,9 +36,11 @@ class ScheduleCompletion(TimestampMixin, Base):
     __tablename__ = "schedule_completions"
 
     schedule_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("schedules.schedule_id"), primary_key=True
+        UUID(as_uuid=True),
+        ForeignKey("schedules.schedule_id", ondelete="CASCADE"),
+        primary_key=True,
     )
     owner_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.user_id"), primary_key=True
+        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True
     )
     done: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
