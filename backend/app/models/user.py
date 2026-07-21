@@ -1,7 +1,7 @@
 import enum
 import uuid
 
-from sqlalchemy import Enum, String
+from sqlalchemy import Boolean, Enum, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -29,3 +29,4 @@ class User(TimestampMixin, Base):
         nullable=False,
         default=UserPermission.STUDENT,
     )
+    is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

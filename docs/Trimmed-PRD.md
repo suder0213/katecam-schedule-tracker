@@ -109,7 +109,7 @@ PostgreSQL(AWS EC2 Docker) -> RDS 마이그레이션
 ### 인증/권한
 **(결정 #10, 구체화) JWT 전략**
 - Access Token: 만료 30분, 요청 헤더(Authorization: Bearer)로 전달
-- Refresh Token: 만료 14일, httpOnly + Secure 쿠키에 저장 (JS에서 접근 불가)
+- Refresh Token: 만료 90일, httpOnly + Secure 쿠키에 저장 (JS에서 접근 불가)
 - 로그인 성공 시 access/refresh 동시 발급
 - Access Token 만료 시 refresh 요청 → 새 access + 새 refresh 발급(rotation), 기존 refresh는 즉시 폐기
 - 로그아웃 시 클라이언트 쿠키 삭제로 처리 (서버 측 세션 저장/블랙리스트는 두지 않음 — 규모가 작아 과설계로 판단, 필요해지면 추가)
@@ -176,7 +176,7 @@ AWS EC2/RDS/S3(필요시 추가)
 - 로그인 인증은 JWT를 사용한다 (구조는 위 "인증/권한" 참고, 결정 #10).
 - 모든 PK는 **UUID**를 사용해 예측 불가능하게 한다 (결정 #13/#20).
 - 비밀번호 정책: 최소 8자, 그 외 제한 없음 (결정 #21).
-- **(결정 #19) Rate limiting은 애플리케이션 레벨에서 구현한다** (Nginx/API Gateway 레벨 아님). 동일 사용자로부터 초당 5회 이상 요청이 오면 해당 계정을 잠시 블락한다.
+- **(결정 #19) Rate limiting은 애플리케이션 레벨에서 구현한다** (Nginx/API Gateway 레벨 아님). 동일 사용자로부터 초당 10회 이상 요청이 오면 해당 계정을 잠시 블락한다.
 
 ### 성능/비용
 - 단순 API 콜이고, 사용자의 수가 200명을 넘지 않으며, 많은 동시 요청을 할 경우가 없으므로 크지 않을 것으로 예상.

@@ -5,14 +5,11 @@ Run with: python -m scripts.seed
 
 import datetime
 
-from passlib.context import CryptContext
-
+from app.core.security import hash_password
 from app.db.base import SessionLocal
 from app.models import Schedule, Team, TeamMember, User
 from app.models.schedule import ScheduleKind
 from app.models.user import UserPermission
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def seed() -> None:
@@ -20,20 +17,20 @@ def seed() -> None:
     try:
         dev = User(
             email="dev@katecam.dev",
-            password=pwd_context.hash("password123"),
+            password=hash_password("password123"),
             nick_name="dev",
             permission=UserPermission.DEV,
         )
         manager = User(
             email="manager@katecam.dev",
-            password=pwd_context.hash("password123"),
+            password=hash_password("password123"),
             nick_name="manager",
             permission=UserPermission.MANAGER,
         )
         students = [
             User(
                 email=f"student{i}@katecam.dev",
-                password=pwd_context.hash("password123"),
+                password=hash_password("password123"),
                 nick_name=f"student{i}",
                 permission=UserPermission.STUDENT,
             )

@@ -84,7 +84,7 @@
    - verify: 미인증 상태로 로그인 시도 시 거부됨을 테스트
 
 2-4. 로그인 / JWT 발급
-   - `POST /auth/login`: access token(30분, 응답 바디/헤더로 전달) + refresh token(14일, httpOnly+Secure 쿠키) 동시 발급
+   - `POST /auth/login`: access token(30분, 응답 바디/헤더로 전달) + refresh token(90일, httpOnly+Secure 쿠키) 동시 발급
    - verify: 로그인 응답에 access token 포함, Set-Cookie에 httpOnly+Secure 속성 확인 (curl -v 또는 브라우저 devtools)
 
 2-5. Refresh / Rotation
@@ -100,7 +100,7 @@
    - verify: 인증 없이 보호된 엔드포인트 호출 시 401, 권한 부족 시 403
 
 2-8. Rate limiting (결정 #19)
-   - 애플리케이션 레벨 구현 (Nginx/Gateway 아님), 동일 사용자 초당 5회 이상 시 임시 블락
+   - 애플리케이션 레벨 구현 (Nginx/Gateway 아님), 동일 사용자 초당 10회 이상 시 임시 블락
    - verify: 짧은 시간에 6회 이상 요청 시 이후 요청이 차단됨을 테스트
 
 ---
