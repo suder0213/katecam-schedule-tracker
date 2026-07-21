@@ -42,9 +42,9 @@
 
 2. 운영진
 - 공유 일정 CRUD
-- 할당된 학생 일정 R
+- 전체 학생 일정 R (팀 소속 여부와 무관하게 모든 student 조회 가능)
 - **(결정 #3/#4) 팀 생성 C** (운영진/개발자만 가능; 팀 자체에 대한 "팀 일정" 기능은 없음 — 아래 데이터 모델 참고)
-- 소속 학생들의 개인 일정 진행 상황 R
+- 전체 학생들의 개인 일정 진행 상황 R (팀 소속 무관)
 
 3. 개발자
 - 사용자/운영진의 권한을 모두 포함한다.
@@ -156,17 +156,17 @@ AWS EC2/RDS/S3(필요시 추가)
 - title: str
 - contents: str
 - deadline: DateTime
-- student_id: UUID | None (개인 일정이면 소유 학생, 공유 일정이면 `None`)
+- owner_id: UUID | None (개인 일정이면 소유자 user_id, 공유 일정이면 `None`) — 원래 `student_id`였으나 개인 일정은 학생뿐 아니라 모든 권한(dev/manager 포함, "0. 공통" 참고)이 가질 수 있어 `owner_id`로 변경
 - created_at: DateTime, updated_at: DateTime (결정 #24)
 
 ### Schedule_Completion
 - schedule_id: UUID
-- student_id: UUID
+- owner_id: UUID (완료 여부를 기록하는 주체의 user_id — 개인 일정이면 그 소유자, 공유 일정이면 각 조회자 본인)
 - done: bool
 - created_at: DateTime (결정 #24 — row가 최초 upsert된 시각)
 - updated_at: DateTime (완료 상태가 마지막으로 바뀐 시각)
 
-> `Schedule`에는 완료 상태를 두지 않는다. "학생 X가 일정 Y를 완료했는지"는 오직 `Schedule_Completion`에 (schedule_id, student_id) 로우가 있는지/`done` 값이 무엇인지로 판단한다. 로우가 없으면 기본값 `false`(미완료)로 취급 — 개인 일정을 새로 만들 때도, 공유 일정이 등록됐을 때도 학생별 완료 로우를 미리 만들 필요 없이, 실제로 학생이 상태를 바꿀 때만 upsert하면 됨. 개인 일정은 (schedule_id, student_id=소유자) 로우 하나만 생기고, 공유 일정은 학생 수만큼 로우가 생길 수 있다는 차이뿐, 테이블 구조와 쿼리 방식은 동일하다.
+> `Schedule`에는 완료 상태를 두지 않는다. "사용자 X가 일정 Y를 완료했는지"는 오직 `Schedule_Completion`에 (schedule_id, owner_id) 로우가 있는지/`done` 값이 무엇인지로 판단한다. 로우가 없으면 기본값 `false`(미완료)로 취급 — 개인 일정을 새로 만들 때도, 공유 일정이 등록됐을 때도 사용자별 완료 로우를 미리 만들 필요 없이, 실제로 상태를 바꿀 때만 upsert하면 됨. 개인 일정은 (schedule_id, owner_id=소유자) 로우 하나만 생기고, 공유 일정은 조회한 사용자 수만큼 로우가 생길 수 있다는 차이뿐, 테이블 구조와 쿼리 방식은 동일하다.
 
 ## 제약 사항
 

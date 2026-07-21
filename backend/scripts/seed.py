@@ -49,14 +49,14 @@ def seed() -> None:
             title="PR 제출",
             contents="이번 주 과제 PR을 제출하세요.",
             deadline=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7),
-            student_id=None,
+            owner_id=None,
         )
         personal_schedule = Schedule(
             kind=ScheduleKind.PERSONAL,
             title="학습일지 작성",
             contents="오늘 배운 내용을 정리한다.",
             deadline=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1),
-            student_id=students[0].user_id,
+            owner_id=students[0].user_id,
         )
         session.add_all([shared_schedule, personal_schedule])
 
