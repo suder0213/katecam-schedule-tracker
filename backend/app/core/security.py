@@ -25,7 +25,12 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 def _create_token(user_id: uuid.UUID, purpose: str, expires_delta: datetime.timedelta) -> str:
     expire = datetime.datetime.now(datetime.timezone.utc) + expires_delta
-    payload = {"sub": str(user_id), "purpose": purpose, "exp": expire}
+    payload = {
+        "sub": str(user_id),
+        "purpose": purpose,
+        "exp": expire,
+        "jti": str(uuid.uuid4()),
+    }
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
