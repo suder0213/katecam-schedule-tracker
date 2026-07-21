@@ -1,5 +1,10 @@
 import datetime
+import uuid
 
+import pytest
+from sqlalchemy.exc import IntegrityError
+
+from app.models.schedule import Schedule, ScheduleKind
 from app.models.user import UserPermission
 
 DEADLINE = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7)).isoformat()
@@ -304,3 +309,34 @@ def test_complete_requires_auth(client, make_user, auth_header):
     resp = client.put(f"/schedules/{schedule_id}/completion", json={"done": True})
 
     assert resp.status_code == 401
+
+
+def test_db_rejects_shared_schedule_with_owner(db_session, make_user):
+    user = make_user("owner@katecam.dev", UserPermission.STUDENT)
+    bad = Schedule(
+        schedule_id=uuid.uuid4(),
+        kind=ScheduleKind.SHARED,
+        title="bad",
+        contents="x",
+        deadline=datetime.datetime.now(datetime.timezone.utc),
+        owner_id=user.user_id,
+    )
+    db_session.add(bad)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+
+
+def test_db_rejects_personal_schedule_without_owner(db_session):
+    bad = Schedule(
+        schedule_id=uuid.uuid4(),
+        kind=ScheduleKind.PERSONAL,
+        title="bad",
+        contents="x",
+        deadline=datetime.datetime.now(datetime.timezone.utc),
+        owner_id=None,
+    )
+    db_session.add(bad)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()

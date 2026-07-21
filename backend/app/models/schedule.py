@@ -2,7 +2,7 @@ import datetime
 import enum
 import uuid
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -17,6 +17,13 @@ class ScheduleKind(str, enum.Enum):
 
 class Schedule(TimestampMixin, Base):
     __tablename__ = "schedules"
+    __table_args__ = (
+        CheckConstraint(
+            "(kind = 'SHARED' AND owner_id IS NULL) "
+            "OR (kind = 'PERSONAL' AND owner_id IS NOT NULL)",
+            name="ck_schedule_owner_matches_kind",
+        ),
+    )
 
     schedule_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

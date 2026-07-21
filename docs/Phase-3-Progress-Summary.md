@@ -40,6 +40,18 @@ Phase 3 CRUD를 다 만든 뒤 "CASCADE가 제대로 선언돼 있나?"는 질�
 
 Postgres는 `ALTER TABLE ... ALTER COLUMN`으로 FK의 `ondelete`만 바꿀 수 없어서, 마이그레이션에서 5개 제약조건을 각각 `DROP CONSTRAINT` 후 같은 이름으로 `ondelete="CASCADE"`를 붙여 재생성. 회귀 테스트(`test_delete_schedule_with_completion_row_cascades`)로 고정.
 
+### Schedule에 `kind`/`owner_id` 정합성 CHECK 제약조건 추가
+
+CASCADE를 점검하다가 "shared 일정에 owner_id가 실수로 채워지면, 그 유저가 삭제될 때 모두가 봐야 할 공유 일정까지 CASCADE로 같이 사라질 수 있는 것 아니냐"는 지적이 나옴. 확인해보니 `kind='shared'`면 `owner_id`가 항상 `NULL`이어야 한다는 규칙이 **애플리케이션 코드에서만** 지켜지고 있었고(생성 시에만 그렇게 세팅, `PATCH`로도 못 바꿈), DB 레벨에서 강제되진 않고 있었음. 다음 CHECK 제약조건을 `schedules` 테이블에 추가해 DB 레벨에서 원천 차단:
+
+```sql
+CHECK ((kind = 'SHARED' AND owner_id IS NULL) OR (kind = 'PERSONAL' AND owner_id IS NOT NULL))
+```
+
+- SQLAlchemy `Enum`이 값을 대문자 멤버 이름(`SHARED`/`PERSONAL`)으로 저장한다는 걸 Phase 2에서 이미 알고 있었어서, CHECK 조건도 대문자로 작성(소문자로 썼으면 항상 거짓이 되어 모든 insert가 막혔을 것).
+- Alembic autogenerate는 CHECK 제약조건 변경을 감지하지 못해서(다른 무관한 drift만 잡음) 마이그레이션을 직접 작성.
+- 실제로 두 위반 케이스(shared인데 owner_id 있음 / personal인데 owner_id 없음) 모두 psql로 직접 insert 시도해서 거부되는 것 확인, `db_session` fixture로 회귀 테스트 2개 추가.
+
 ## 트러블슈팅
 
 - **컬럼 rename 후 테스트 DB가 stale해지는 문제.** `tests/conftest.py`가 `Base.metadata.create_all()`만 호출하고 있었는데, 이건 없는 테이블만 만들지 이미 존재하는 테이블의 컬럼 변경은 반영하지 않음. `student_id→owner_id` 마이그레이션 직후 스케줄 테스트 전체가 `column schedules.owner_id does not exist` 에러로 실패. `drop_all()` 후 `create_all()`로 변경해 앞으로 모델이 바뀔 때마다 테스트 DB가 항상 최신 스키마로 재생성되도록 수정.
@@ -49,8 +61,8 @@ Postgres는 `ALTER TABLE ... ALTER COLUMN`으로 FK의 `ondelete`만 바꿀 수 
 
 ## 테스트 현황
 
-- `test_users.py`(11), `test_teams.py`(18), `test_schedules.py`(22), `test_schedules_calendar.py`(10) 신규 추가
-- 기존 `test_auth.py`(19), `test_security.py`(3), `test_rate_limit.py`(3)와 합쳐 총 **86개 테스트 통과**
+- `test_users.py`(11), `test_teams.py`(18), `test_schedules.py`(24), `test_schedules_calendar.py`(10) 신규 추가
+- 기존 `test_auth.py`(19), `test_security.py`(3), `test_rate_limit.py`(3)와 합쳐 총 **88개 테스트 통과**
 - `tests/conftest.py`에 `make_user`(임의 권한의 인증된 유저를 DB에 직접 생성), `auth_header`(그 유저의 access token 헤더 생성), `db_session`(API가 아직 없는 관계를 테스트에서 직접 넣기 위한 raw DB 세션) fixture 추가 — Phase 3 전반에서 재사용
 
 ## 현재 상태
