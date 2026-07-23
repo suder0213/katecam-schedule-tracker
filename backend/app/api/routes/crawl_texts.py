@@ -32,6 +32,19 @@ def create_crawl_text(
     return crawl_text
 
 
+@router.get("/{raw_text_id}", response_model=CrawlTextResponse)
+def read_crawl_text(
+    raw_text_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _current_user=Depends(require_permission(UserPermission.DEV)),
+) -> CrawlText:
+    crawl_text = db.get(CrawlText, raw_text_id)
+    if crawl_text is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Crawl text not found")
+
+    return crawl_text
+
+
 @router.post(
     "/{raw_text_id}/analyze",
     response_model=list[ScheduleProposalResponse],

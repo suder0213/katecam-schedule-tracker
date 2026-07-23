@@ -14,6 +14,8 @@ from app.models.user import User, UserPermission
 TEST_DATABASE_URL = settings.database_url.rsplit("/", 1)[0] + "/katecam_test"
 
 TABLES_IN_FK_ORDER = (
+    "schedule_proposals",
+    "crawl_texts",
     "schedule_completions",
     "schedules",
     "team_members",
