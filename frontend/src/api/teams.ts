@@ -14,6 +14,10 @@ export async function createTeam(name: string): Promise<Team> {
   return api.post<Team>('/teams', { name })
 }
 
+export async function deleteTeam(teamId: string): Promise<void> {
+  await api.delete(`/teams/${teamId}`)
+}
+
 export async function joinTeam(teamId: string, userId: string): Promise<void> {
   await api.post(`/teams/${teamId}/members`, { user_id: userId })
 }

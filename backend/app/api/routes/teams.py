@@ -121,3 +121,17 @@ def remove_team_member(
 
     db.delete(membership)
     db.commit()
+
+
+@router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_team(
+    team_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
+) -> None:
+    team = db.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Team not found")
+
+    db.delete(team)
+    db.commit()
