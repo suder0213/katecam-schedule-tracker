@@ -9,3 +9,15 @@ export async function listTeams(): Promise<Team[]> {
 export async function listTeamMembers(teamId: string): Promise<User[]> {
   return api.get<User[]>(`/teams/${teamId}/members`)
 }
+
+export async function createTeam(name: string): Promise<Team> {
+  return api.post<Team>('/teams', { name })
+}
+
+export async function joinTeam(teamId: string, userId: string): Promise<void> {
+  await api.post(`/teams/${teamId}/members`, { user_id: userId })
+}
+
+export async function leaveTeam(teamId: string, userId: string): Promise<void> {
+  await api.delete(`/teams/${teamId}/members/${userId}`)
+}
