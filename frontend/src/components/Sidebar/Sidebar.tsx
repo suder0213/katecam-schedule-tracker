@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { TodoTab } from './TodoTab'
-import { TeamTab } from './TeamTab'
+import { StudentsTab } from './StudentsTab'
+import { AllTeamsTab } from './AllTeamsTab'
+import type { User } from '../../types/user'
 
 export interface SidebarTab {
   key: string
@@ -9,14 +11,18 @@ export interface SidebarTab {
 }
 
 interface SidebarProps {
-  // Manager/dev-only tabs get appended here in later phases (student list, Agent panel).
+  // Anyone can browse the student/team directory — viewing another student's
+  // schedule from it is what's actually access-controlled, not the listing.
+  onSelectStudent: (student: User) => void
+  // Dev-only tabs (account management, Agent review) get appended here later.
   extraTabs?: SidebarTab[]
 }
 
-export function Sidebar({ extraTabs = [] }: SidebarProps) {
+export function Sidebar({ onSelectStudent, extraTabs = [] }: SidebarProps) {
   const tabs: SidebarTab[] = [
     { key: 'todo', label: 'TODO', content: <TodoTab /> },
-    { key: 'team', label: 'Team', content: <TeamTab /> },
+    { key: 'students', label: '학생', content: <StudentsTab onSelect={onSelectStudent} /> },
+    { key: 'all-teams', label: '팀', content: <AllTeamsTab onSelect={onSelectStudent} /> },
     ...extraTabs,
   ]
   const [activeKey, setActiveKey] = useState(tabs[0].key)

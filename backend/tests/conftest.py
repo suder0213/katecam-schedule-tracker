@@ -77,13 +77,17 @@ def client():
 def make_user():
     """Creates an already-verified user directly in the DB, bypassing signup/verify."""
 
-    def _make(email: str, permission: UserPermission = UserPermission.STUDENT) -> User:
+    def _make(
+        email: str,
+        permission: UserPermission = UserPermission.STUDENT,
+        nick_name: str | None = None,
+    ) -> User:
         db = TestingSessionLocal()
         try:
             user = User(
                 email=email,
                 password=hash_password("password123"),
-                nick_name=email.split("@")[0],
+                nick_name=nick_name or email.split("@")[0],
                 permission=permission,
                 is_verified=True,
             )

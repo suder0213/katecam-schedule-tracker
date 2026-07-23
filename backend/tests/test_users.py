@@ -1,6 +1,29 @@
 from app.models.user import UserPermission
 
 
+def test_list_students_returns_only_students_sorted_by_nick_name(client, make_user, auth_header):
+    manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
+    make_user("student-c@katecam.dev", UserPermission.STUDENT, nick_name="다니엘")
+    make_user("student-a@katecam.dev", UserPermission.STUDENT, nick_name="가영")
+    make_user("other-manager@katecam.dev", UserPermission.MANAGER)
+
+    resp = client.get("/users", headers=auth_header(manager))
+
+    assert resp.status_code == 200
+    nick_names = [u["nick_name"] for u in resp.json()]
+    assert nick_names == ["가영", "다니엘"]
+
+
+def test_list_students_visible_to_student(client, make_user, auth_header):
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+    make_user("other-student@katecam.dev", UserPermission.STUDENT, nick_name="나영")
+
+    resp = client.get("/users", headers=auth_header(student))
+
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+
 def test_read_user_dev_can_view_anyone(client, make_user, auth_header):
     dev = make_user("dev@katecam.dev", UserPermission.DEV)
     manager = make_user("manager@katecam.dev", UserPermission.MANAGER)

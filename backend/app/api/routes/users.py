@@ -18,6 +18,19 @@ def read_current_user(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+@router.get("", response_model=list[SignupResponse])
+def list_students(
+    _current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[User]:
+    return (
+        db.query(User)
+        .filter(User.permission == UserPermission.STUDENT)
+        .order_by(User.nick_name)
+        .all()
+    )
+
+
 @router.get("/{user_id}", response_model=SignupResponse)
 def read_user(
     user_id: uuid.UUID,
