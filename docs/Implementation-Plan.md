@@ -152,28 +152,39 @@
 
 목표: PRD MVP 핵심 — "수동 텍스트 입력 → Agent 분석 → 사람 Approve → 실제 반영 → 반영 전 백업" 흐름 구현. Phase 3 Schedule CRUD 완료 후 진행 (Agent가 결국 Schedule을 C/U 하므로).
 
+> **`docs/Frontend-Feature-Spec.md` 기준 재설계.** 원래 이 Phase는 "계획(Plan) 전체를 통째로 approve/reject"하는 구조였는데, 프론트엔드 화면 명세를 구체화하면서 **"하나의 원문 텍스트에서 나온 제안들을 카드 단위로 개별 승인/거절"**하는 것으로 변경됨. 아래 4-1~4-6은 이 변경을 반영해 다시 작성.
+
 4-1. 텍스트 입력 API
    - `POST /crawl-texts` (dev 전용) — Discord/Notion 내용을 수동 복사한 원문 텍스트 저장
-   - verify: dev 계정만 호출 가능, 저장된 원문 row 확인
+   - 요청 필드: `source: 'notion' | 'discord'`, `channel: str | None`(discord일 때만 — 예: "공지방", "학습공지방"), `raw_text: str`
+   - Agent가 출처/채널별로 나뉘므로(2-4 참고: Notion 1개 + Discord는 채널별 Sub-Agent), 저장 시점에 어느 Agent가 처리해야 할지 구분할 수 있어야 함
+   - verify: dev 계정만 호출 가능, 저장된 원문 row에 source/channel 확인
 
-4-2. Agent 분석 → "추가 계획" 생성
-   - Claude API 호출: 원문 텍스트 → 구조화된 일정 변경 계획(JSON: create/update 목록, 각 항목에 title/contents/deadline/근거 스니펫)
-   - 계획은 DB에 별도 상태(예: `Schedule_Plan` 테이블: plan_id, raw_text_id, proposed_changes(JSON), status: pending/approved/rejected)로 저장 — 즉시 Schedule에 반영하지 않음
-   - verify: 샘플 텍스트로 호출 시 사람이 읽을 수 있는 구조화된 JSON 계획이 저장됨
+4-2. Agent 분석 → "제안 카드" 생성
+   - Claude API 호출(Tool use로 구조화된 출력 강제): 원문 텍스트 → create/update 제안 목록(JSON). **delete는 Agent가 제안하지 않음** — 삭제는 항상 사람이 직접 수행
+   - 파싱 실패 시 최대 3회까지 재시도, 계속 실패하면 "파싱 실패" 상태로 표시(사람이 원문을 보고 직접 처리)
+   - 근거는 카드별 스니펫을 따로 만들지 않고, 카드들이 속한 원문 텍스트(`raw_text_id`)를 참조해서 화면에서 원문을 한 번만 보여주는 방식(2-5b 참고)
+   - 신규 테이블 `ScheduleProposal`: `proposal_id(PK), raw_text_id(FK), action('create'|'update'), title, contents, deadline, target_schedule_id(UUID|None, update일 때만 대상 Schedule 참조), status('pending'|'approved'|'rejected'|'parse_failed'), created_at, updated_at`
+   - 기존 계획에 있던 plan 전체 단위의 `Schedule_Plan` 테이블은 두지 않음 — **status를 포함한 모든 상태가 `ScheduleProposal`(카드) 레벨**에 있음. 원문 텍스트(`CrawlText`)는 여러 `ScheduleProposal`을 가질 수 있는 1:N 관계
+   - verify: 샘플 텍스트로 호출 시 사람이 읽을 수 있는 `ScheduleProposal` row들이 저장됨(각각 독립적으로 pending 상태)
 
-4-3. 계획 조회/Approve API
-   - `GET /schedule-plans` (dev 조회)
-   - `POST /schedule-plans/{id}/approve` / `POST /schedule-plans/{id}/reject`
-   - verify: reject 시 Schedule 테이블 변경 없음, approve 시에만 실제 반영
+4-3. 제안 카드 조회/Approve API
+   - `GET /crawl-texts/{id}` — 원문 텍스트 조회(카드 묶음 상단에 표시/링크용)
+   - `GET /schedule-proposals?raw_text_id=` (dev 조회) — 특정 원문에 딸린 카드들, 혹은 전체 카드 목록(원문 텍스트 단위로 그룹핑해서 반환)
+   - `POST /schedule-proposals/{id}/approve` / `POST /schedule-proposals/{id}/reject` — **카드(개별 제안) 단위**로 호출
+   - verify: reject 시 Schedule 테이블 변경 없음(해당 카드만 rejected), approve 시 그 카드 하나만 실제 반영, 같은 원문의 다른 카드는 영향 없음(부분 승인 확인)
 
 4-4. 백업 생성 (Approve 직전, 결정 #11 — EC2 로컬 폴더)
-   - approve 처리 직전, 영향받는 Schedule row들을 JSON/CSV로 스냅샷하여 로컬 폴더에 파일로 저장 (파일명에 timestamp+plan_id)
-   - verify: approve 호출 시 백업 파일이 먼저 생성되고, 그 다음에만 실제 Schedule C/U가 실행되는 순서를 코드/테스트로 확인 (백업 실패 시 반영 중단되어야 함)
+   - approve 처리 직전, **그 카드가 영향을 주는 Schedule row 하나**를 JSON/CSV로 스냅샷하여 로컬 폴더에 파일로 저장(파일명에 timestamp+proposal_id)
+   - `action='create'`인 카드는 되돌릴 "이전 상태"가 없으므로 백업을 만들 필요 없음(생성 자체가 새 row라 스냅샷 대상이 없음) — `action='update'`인 카드만 approve 직전 기존 Schedule row를 백업
+   - 카드 단위 백업이라 파일 수가 늘어날 수 있지만, 사용자 규모(200명 안팎)를 고려하면 부담 크지 않다고 판단(Frontend-Feature-Spec.md 결정 로그)
+   - verify: update 카드 approve 시 백업 파일이 먼저 생성되고 그 다음에만 실제 Schedule U가 실행되는 순서 확인(백업 실패 시 반영 중단), create 카드는 백업 없이 바로 반영되는지 확인
 
 4-5. Approve 반영 로직
-   - 계획의 create/update 항목을 실제 Schedule 테이블에 반영
+   - 카드의 `action`에 따라 실제 Schedule 테이블에 반영(create면 새 Schedule 생성, update면 `target_schedule_id`의 Schedule을 수정)
    - PRD 원칙: "Agent는 CR은 자유롭게, UD는 가급적 사람 승인 후"만 — 이번 흐름은 애초에 전부 사람이 approve하므로 원칙을 만족
-   - verify: approve 후 Schedule 테이블에 실제 반영, 백업 파일과 diff 비교 가능
+   - approve 반영 실패 시 카드 상태를 pending으로 되돌리고 프론트에 에러 표시(2-5c)
+   - verify: approve 후 Schedule 테이블에 실제 반영, update의 경우 백업 파일과 diff 비교 가능
 
 4-6. (참고, MVP 이후) 자동 크롤링/스케줄러
    - MVP 이후 단계: Discord/Notion 권한 확보 시 4-1의 수동 입력을 자동 수집으로 대체
@@ -181,6 +192,7 @@
    - 수동 실행 엔드포인트(dev 전용)와 스케줄 트리거가 동일 함수를 공유하도록 설계 (PRD 명시)
    - uvicorn 멀티워커 사용 시 크롤링 중복 실행 방지 위해 크롤링 담당 프로세스는 단일 워커로 운영
    - 이번 구현 순서에서는 설계만 남기고 실제 구현은 MVP 이후로 미룸
+   - **참고(범위 밖)**: Discord 음악추천채널 전용 Agent는 매일 9시 자동 종합 실행이 계획되어 있으나(Frontend-Feature-Spec.md 2-5e) 아직 설계 확정 전 — 이번 Phase 4 구현 범위에 포함하지 않음. 다만 크롤링 파이프라인을 "채널별로 다른 처리(schedule 추출이 아닌 다른 종류의 콘텐츠도 있을 수 있음)"를 나중에 얹기 쉬운 구조로 짜두면 좋음
 
 ---
 
