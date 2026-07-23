@@ -276,3 +276,65 @@ def test_list_my_teams_requires_auth(client):
     resp = client.get("/teams/mine")
 
     assert resp.status_code == 401
+
+
+def test_manager_can_delete_team(client, make_user, auth_header):
+    manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
+    team_id = _create_team(client, manager)
+
+    resp = client.delete(f"/teams/{team_id}", headers=auth_header(manager))
+
+    assert resp.status_code == 204
+    assert client.get("/teams", headers=auth_header(manager)).json() == []
+
+
+def test_dev_can_delete_team(client, make_user, auth_header):
+    dev = make_user("dev@katecam.dev", UserPermission.DEV)
+    team_id = _create_team(client, dev)
+
+    resp = client.delete(f"/teams/{team_id}", headers=auth_header(dev))
+
+    assert resp.status_code == 204
+
+
+def test_deleting_team_removes_memberships(client, make_user, auth_header):
+    manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+    team_id = _create_team(client, manager)
+    client.post(
+        f"/teams/{team_id}/members",
+        json={"user_id": str(student.user_id)},
+        headers=auth_header(student),
+    )
+
+    resp = client.delete(f"/teams/{team_id}", headers=auth_header(manager))
+
+    assert resp.status_code == 204
+    assert client.get("/teams/mine", headers=auth_header(student)).json() == []
+
+
+def test_student_cannot_delete_team(client, make_user, auth_header):
+    manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+    team_id = _create_team(client, manager)
+
+    resp = client.delete(f"/teams/{team_id}", headers=auth_header(student))
+
+    assert resp.status_code == 403
+
+
+def test_delete_team_not_found(client, make_user, auth_header):
+    manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
+
+    resp = client.delete(f"/teams/{uuid.uuid4()}", headers=auth_header(manager))
+
+    assert resp.status_code == 404
+
+
+def test_delete_team_requires_auth(client, make_user, auth_header):
+    manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
+    team_id = _create_team(client, manager)
+
+    resp = client.delete(f"/teams/{team_id}")
+
+    assert resp.status_code == 401

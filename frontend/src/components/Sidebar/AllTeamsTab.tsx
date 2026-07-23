@@ -20,6 +20,9 @@ export function AllTeamsTab({ onSelect }: AllTeamsTabProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [membershipError, setMembershipError] = useState<string | null>(null)
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -99,11 +102,26 @@ export function AllTeamsTab({ onSelect }: AllTeamsTabProps) {
     }
   }
 
-  const canCreateTeam = user?.permission === 'manager' || user?.permission === 'dev'
+  async function handleDeleteTeam(teamId: string) {
+    setIsDeleting(true)
+    setDeleteError(null)
+    try {
+      await teamsApi.deleteTeam(teamId)
+      setTeams((prev) => prev.filter((t) => t.team_id !== teamId))
+      setConfirmingDeleteId(null)
+      if (expandedTeamId === teamId) setExpandedTeamId(null)
+    } catch {
+      setDeleteError('팀을 삭제하지 못했습니다.')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const canManageTeams = user?.permission === 'manager' || user?.permission === 'dev'
 
   return (
     <div className="flex flex-col">
-      {canCreateTeam && (
+      {canManageTeams && (
         <form onSubmit={(e) => void handleCreateTeam(e)} className="flex gap-1 border-b border-neutral-100 p-2">
           <input
             type="text"
@@ -123,6 +141,7 @@ export function AllTeamsTab({ onSelect }: AllTeamsTabProps) {
       )}
       {createError && <p className="px-2 pt-1 text-xs text-red-500">{createError}</p>}
       {membershipError && <p className="px-2 pt-1 text-xs text-red-500">{membershipError}</p>}
+      {deleteError && <p className="px-2 pt-1 text-xs text-red-500">{deleteError}</p>}
 
       {isLoading ? (
         <p className="p-4 text-sm text-neutral-400">불러오는 중...</p>
@@ -156,6 +175,36 @@ export function AllTeamsTab({ onSelect }: AllTeamsTabProps) {
                         {isMember ? '이 팀 탈퇴' : '이 팀 가입'}
                       </button>
                     )}
+                    {canManageTeams &&
+                      (confirmingDeleteId === team.team_id ? (
+                        <div className="flex items-center gap-1 px-2 py-1.5">
+                          <span className="flex-1 text-xs text-red-500">정말 삭제?</span>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingDeleteId(null)}
+                            disabled={isDeleting}
+                            className="rounded-lg border border-neutral-200 px-2 py-1 text-xs text-neutral-500 hover:bg-neutral-100 disabled:opacity-50"
+                          >
+                            취소
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteTeam(team.team_id)}
+                            disabled={isDeleting}
+                            className="rounded-lg bg-red-500 px-2 py-1 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingDeleteId(team.team_id)}
+                          className="w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-red-500 hover:bg-neutral-100"
+                        >
+                          이 팀 삭제
+                        </button>
+                      ))}
                     <ul className="flex flex-col gap-0.5">
                       {memberError && <li className="py-1 text-xs text-red-500">{memberError}</li>}
                       {(members ?? []).map((member) => (
