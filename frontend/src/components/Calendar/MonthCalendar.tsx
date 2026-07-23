@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { useAuth } from '../../auth/AuthContext'
+import { useScheduleSync } from '../../context/ScheduleSyncContext'
 import * as scheduleApi from '../../api/schedules'
 import type { Schedule } from '../../types/schedule'
 import { getMonthGrid, isSameDay, formatDateKey } from './dateUtils'
@@ -14,6 +15,7 @@ interface MonthCalendarProps {
 
 export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
   const { user } = useAuth()
+  const { version, notifyChanged } = useScheduleSync()
   const today = useMemo(() => new Date(), [])
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
@@ -37,7 +39,7 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
 
   useEffect(() => {
     void load()
-  }, [load])
+  }, [load, version])
 
   const grid = useMemo(() => getMonthGrid(year, month), [year, month])
 
@@ -75,6 +77,16 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
     const [y, m] = e.target.value.split('-').map(Number)
     setYear(y)
     setMonth(m)
+  }
+
+  async function handleToggleDone(schedule: Schedule) {
+    try {
+      await scheduleApi.updateCompletion(schedule.schedule_id, !schedule.done)
+      await load()
+      notifyChanged()
+    } catch {
+      setError('완료 상태 변경에 실패했습니다.')
+    }
   }
 
   const canCreateShared = user?.permission === 'manager' || user?.permission === 'dev'
@@ -130,11 +142,10 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
           const isToday = isSameDay(date, today)
 
           return (
-            <button
+            <div
               key={key}
-              type="button"
               onClick={() => setSelectedDate(date)}
-              className={`flex min-h-24 flex-col items-stretch gap-1 border-b border-r border-neutral-100 p-1.5 text-left last:border-r-0 hover:bg-neutral-50 ${
+              className={`flex min-h-24 cursor-pointer flex-col items-stretch gap-1 border-b border-r border-neutral-100 p-1.5 text-left last:border-r-0 hover:bg-neutral-50 ${
                 inCurrentMonth ? 'bg-white' : 'bg-neutral-50 text-neutral-300'
               }`}
             >
@@ -149,22 +160,31 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
               </span>
               <div className="flex flex-1 flex-col gap-0.5">
                 {visible.map((s) => (
-                  <span
+                  <label
                     key={s.schedule_id}
-                    className={`truncate rounded px-1 py-0.5 text-[11px] ${
+                    onClick={(e) => e.stopPropagation()}
+                    className={`flex items-center gap-1 truncate rounded px-1 py-0.5 text-[11px] ${
                       s.kind === 'shared'
                         ? 'bg-kakao-yellow/70 text-kakao-black'
                         : 'bg-neutral-200 text-neutral-700'
-                    } ${s.done ? 'line-through opacity-50' : ''}`}
+                    }`}
                   >
-                    {s.title}
-                  </span>
+                    <input
+                      type="checkbox"
+                      checked={s.done}
+                      onChange={() => void handleToggleDone(s)}
+                      className="h-2.5 w-2.5 shrink-0"
+                    />
+                    <span className={`truncate ${s.done ? 'line-through opacity-50' : ''}`}>
+                      {s.title}
+                    </span>
+                  </label>
                 ))}
                 {overflowCount > 0 && (
                   <span className="text-[11px] text-neutral-400">+{overflowCount}개 더보기</span>
                 )}
               </div>
-            </button>
+            </div>
           )
         })}
       </div>
@@ -178,7 +198,10 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
           canCreateShared={canCreateShared}
           canCreatePersonal={isOwnCalendar}
           onClose={() => setSelectedDate(null)}
-          onChanged={load}
+          onChanged={async () => {
+            await load()
+            notifyChanged()
+          }}
         />
       )}
     </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../auth/AuthContext'
 import * as scheduleApi from '../../api/schedules'
 import type { Schedule } from '../../types/schedule'
@@ -26,6 +26,14 @@ export function DayDetailModal({
   const { user } = useAuth()
   const [mode, setMode] = useState<Mode>('list')
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   function canEdit(schedule: Schedule): boolean {
     if (schedule.kind === 'shared') {
