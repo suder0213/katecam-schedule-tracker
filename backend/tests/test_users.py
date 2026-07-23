@@ -124,9 +124,7 @@ def test_dev_cannot_delete_another_dev_via_admin_endpoint(client, make_user, aut
 def test_delete_user_not_found(client, make_user, auth_header):
     dev = make_user("dev@katecam.dev", UserPermission.DEV)
 
-    resp = client.delete(
-        "/users/00000000-0000-0000-0000-000000000000", headers=auth_header(dev)
-    )
+    resp = client.delete("/users/00000000-0000-0000-0000-000000000000", headers=auth_header(dev))
 
     assert resp.status_code == 404
 
