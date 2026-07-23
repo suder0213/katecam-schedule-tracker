@@ -31,6 +31,14 @@ def list_students(
     )
 
 
+@router.get("/all", response_model=list[SignupResponse])
+def list_all_users(
+    _current_user: User = Depends(require_permission(UserPermission.DEV)),
+    db: Session = Depends(get_db),
+) -> list[User]:
+    return db.query(User).order_by(User.nick_name).all()
+
+
 @router.get("/{user_id}", response_model=SignupResponse)
 def read_user(
     user_id: uuid.UUID,
