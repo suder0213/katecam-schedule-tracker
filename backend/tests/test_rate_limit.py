@@ -1,4 +1,14 @@
+import pytest
+
+from app.core.config import settings
 from app.core.rate_limit import REQUEST_LIMIT
+
+# Rate limiting is disabled by default (RATE_LIMIT_ENABLED=false) — not currently
+# used. Kept here, skipped, so the middleware's behavior is still documented and
+# easy to re-enable later if the feature comes back.
+pytestmark = pytest.mark.skipif(
+    not settings.rate_limit_enabled, reason="rate limiting is disabled by default"
+)
 
 
 def test_requests_within_limit_pass(client):
