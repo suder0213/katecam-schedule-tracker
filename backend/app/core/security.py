@@ -8,8 +8,11 @@ from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-EMAIL_VERIFICATION_PURPOSE = "email_verification"
-EMAIL_VERIFICATION_EXPIRE_HOURS = 24
+# Email verification is disabled for MVP (new accounts are auto-verified on
+# signup, see auth.py) — kept commented instead of deleted so it's easy to
+# turn back on later.
+# EMAIL_VERIFICATION_PURPOSE = "email_verification"
+# EMAIL_VERIFICATION_EXPIRE_HOURS = 24
 
 ACCESS_TOKEN_PURPOSE = "access"
 REFRESH_TOKEN_PURPOSE = "refresh"
@@ -49,16 +52,16 @@ def _decode_token(token: str, purpose: str) -> uuid.UUID | None:
         return None
 
 
-def create_email_verification_token(user_id: uuid.UUID) -> str:
-    return _create_token(
-        user_id,
-        EMAIL_VERIFICATION_PURPOSE,
-        datetime.timedelta(hours=EMAIL_VERIFICATION_EXPIRE_HOURS),
-    )
-
-
-def decode_email_verification_token(token: str) -> uuid.UUID | None:
-    return _decode_token(token, EMAIL_VERIFICATION_PURPOSE)
+# def create_email_verification_token(user_id: uuid.UUID) -> str:
+#     return _create_token(
+#         user_id,
+#         EMAIL_VERIFICATION_PURPOSE,
+#         datetime.timedelta(hours=EMAIL_VERIFICATION_EXPIRE_HOURS),
+#     )
+#
+#
+# def decode_email_verification_token(token: str) -> uuid.UUID | None:
+#     return _decode_token(token, EMAIL_VERIFICATION_PURPOSE)
 
 
 def create_access_token(user_id: uuid.UUID) -> str:

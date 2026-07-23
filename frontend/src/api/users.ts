@@ -19,3 +19,11 @@ export async function updateMyPassword(currentPassword: string, newPassword: str
     new_password: newPassword,
   })
 }
+
+export async function deleteMyAccount(): Promise<void> {
+  await api.delete<void>('/users/me')
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+  await api.delete<void>(`/users/${userId}`)
+}

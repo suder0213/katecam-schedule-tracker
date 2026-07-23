@@ -1,5 +1,3 @@
-import logging
-
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
@@ -7,17 +5,13 @@ from app.api.deps import get_db
 from app.core.config import settings
 from app.core.security import (
     create_access_token,
-    create_email_verification_token,
     create_refresh_token,
-    decode_email_verification_token,
     decode_refresh_token,
     hash_password,
     verify_password,
 )
 from app.models.user import User
 from app.schemas.auth import LoginRequest, SignupRequest, SignupResponse, TokenResponse
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -46,38 +40,34 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)) -> User:
         email=payload.email,
         password=hash_password(payload.password),
         nick_name=payload.nick_name,
-        is_verified=False,
+        # Email verification is disabled for MVP — auto-verified on signup.
+        # See app/core/security.py for the commented-out token functions and
+        # git history for the original /auth/verify endpoint.
+        is_verified=True,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    token = create_email_verification_token(user.user_id)
-    logger.info(
-        "Verification email for %s: GET /auth/verify?token=%s",
-        user.email,
-        token,
-    )
-
     return user
 
 
-@router.get("/verify", response_model=SignupResponse)
-def verify_email(token: str, db: Session = Depends(get_db)) -> User:
-    user_id = decode_email_verification_token(token)
-    if user_id is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or expired verification token")
-
-    user = db.get(User, user_id)
-    if user is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
-
-    if not user.is_verified:
-        user.is_verified = True
-        db.commit()
-        db.refresh(user)
-
-    return user
+# @router.get("/verify", response_model=SignupResponse)
+# def verify_email(token: str, db: Session = Depends(get_db)) -> User:
+#     user_id = decode_email_verification_token(token)
+#     if user_id is None:
+#         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or expired verification token")
+#
+#     user = db.get(User, user_id)
+#     if user is None:
+#         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+#
+#     if not user.is_verified:
+#         user.is_verified = True
+#         db.commit()
+#         db.refresh(user)
+#
+#     return user
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -86,8 +76,8 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
     if user is None or not verify_password(payload.password, user.password):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
 
-    if not user.is_verified:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Email not verified")
+    # if not user.is_verified:
+    #     raise HTTPException(status.HTTP_403_FORBIDDEN, "Email not verified")
 
     access_token = create_access_token(user.user_id)
     refresh_token = create_refresh_token(user.user_id)

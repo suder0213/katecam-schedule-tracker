@@ -45,6 +45,19 @@ export function AdminUsersPage() {
     }
   }
 
+  async function handleDelete(user: User) {
+    setPendingId(user.user_id)
+    setError(null)
+    try {
+      await usersApi.deleteUser(user.user_id)
+      load()
+    } catch {
+      setError('삭제에 실패했습니다.')
+    } finally {
+      setPendingId(null)
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-neutral-50">
       <AppHeader />
@@ -82,6 +95,16 @@ export function AdminUsersPage() {
                       <option value="student">학생</option>
                       <option value="manager">운영진</option>
                     </select>
+                  )}
+                  {u.permission !== 'dev' && (
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(u)}
+                      disabled={pendingId === u.user_id}
+                      className="text-xs text-red-400 underline hover:text-red-600 disabled:opacity-50"
+                    >
+                      삭제
+                    </button>
                   )}
                 </div>
               </li>

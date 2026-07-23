@@ -45,6 +45,15 @@ def update_my_password(
     db.commit()
 
 
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_my_account(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    db.delete(current_user)
+    db.commit()
+
+
 @router.get("", response_model=list[SignupResponse])
 def list_users(
     _current_user: User = Depends(get_current_user),
@@ -93,3 +102,20 @@ def update_user_permission(
     db.refresh(target)
 
     return target
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: uuid.UUID,
+    _current_user: User = Depends(require_permission(UserPermission.DEV)),
+    db: Session = Depends(get_db),
+) -> None:
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    if target.permission == UserPermission.DEV:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cannot delete a dev account")
+
+    db.delete(target)
+    db.commit()

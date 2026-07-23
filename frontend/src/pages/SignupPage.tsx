@@ -40,11 +40,11 @@ export function SignupPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
         <div className="w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-sm">
-          <h1 className="mb-2 text-xl font-bold text-kakao-black">가입 신청 완료</h1>
+          <h1 className="mb-2 text-xl font-bold text-kakao-black">가입 완료</h1>
           <p className="text-sm text-neutral-500">
-            <strong>{email}</strong>로 인증 메일을 발송했습니다.
+            <strong>{email}</strong> 계정이 생성되었습니다.
             <br />
-            메일함에서 인증 링크를 클릭한 뒤 로그인해주세요.
+            바로 로그인해주세요.
           </p>
           <Link
             to="/login"

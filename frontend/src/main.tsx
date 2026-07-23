@@ -7,7 +7,8 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import { DevRoute } from './auth/DevRoute'
 import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
-import { VerifyEmailPage } from './pages/VerifyEmailPage'
+// Email verification is disabled for MVP (see backend/app/api/routes/auth.py)
+// import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
 import { AgentReviewPage } from './pages/AgentReviewPage'
@@ -19,7 +20,7 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
-          <Route path="/verify" element={<VerifyEmailPage />} />
+          {/* <Route path="/verify" element={<VerifyEmailPage />} /> */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardPage />} />
             <Route element={<DevRoute />}>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import * as usersApi from '../api/users'
 import { ApiError } from '../api/client'
@@ -8,7 +9,8 @@ interface AccountSettingsModalProps {
 }
 
 export function AccountSettingsModal({ onClose }: AccountSettingsModalProps) {
-  const { user, refreshUser } = useAuth()
+  const { user, logout, refreshUser } = useAuth()
+  const navigate = useNavigate()
 
   const [nickName, setNickName] = useState(user?.nick_name ?? '')
   const [nickNameError, setNickNameError] = useState<string | null>(null)
@@ -20,6 +22,10 @@ export function AccountSettingsModal({ onClose }: AccountSettingsModalProps) {
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [isSavingPassword, setIsSavingPassword] = useState(false)
+
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -69,6 +75,19 @@ export function AccountSettingsModal({ onClose }: AccountSettingsModalProps) {
       }
     } finally {
       setIsSavingPassword(false)
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteError(null)
+    setIsDeletingAccount(true)
+    try {
+      await usersApi.deleteMyAccount()
+      await logout()
+      navigate('/login', { replace: true })
+    } catch {
+      setDeleteError('계정 삭제에 실패했습니다.')
+      setIsDeletingAccount(false)
     }
   }
 
@@ -147,6 +166,43 @@ export function AccountSettingsModal({ onClose }: AccountSettingsModalProps) {
           </div>
           {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
           {passwordSuccess && <p className="mt-1 text-xs text-green-600">변경되었습니다.</p>}
+        </div>
+
+        <div className="mt-6 border-t border-neutral-100 pt-4">
+          {isConfirmingDelete ? (
+            <div>
+              <p className="mb-2 text-xs text-red-500">
+                정말 계정을 삭제하시겠습니까? 되돌릴 수 없습니다.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingDelete(false)}
+                  disabled={isDeletingAccount}
+                  className="rounded-lg border border-neutral-200 px-3 py-1.5 text-sm text-neutral-500 hover:bg-neutral-100 disabled:opacity-50"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteAccount()}
+                  disabled={isDeletingAccount}
+                  className="rounded-lg bg-red-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+                >
+                  {isDeletingAccount ? '삭제 중...' : '삭제 확인'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsConfirmingDelete(true)}
+              className="text-xs text-red-400 underline hover:text-red-600"
+            >
+              계정 삭제
+            </button>
+          )}
+          {deleteError && <p className="mt-1 text-xs text-red-500">{deleteError}</p>}
         </div>
       </div>
     </div>

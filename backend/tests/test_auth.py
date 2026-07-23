@@ -1,7 +1,3 @@
-import uuid
-
-from app.core.security import create_email_verification_token
-
 EMAIL = "auth-test@katecam.dev"
 PASSWORD = "password123"
 
@@ -13,24 +9,26 @@ def _signup(client, email=EMAIL, password=PASSWORD, nick_name="tester"):
     )
 
 
-def _verify(client, user_id: str):
-    token = create_email_verification_token(uuid.UUID(user_id))
-    return client.get("/auth/verify", params={"token": token})
-
-
+# Email verification is disabled for MVP (see auth.py) — new accounts are
+# auto-verified on signup, so _signup_and_verify is now just _signup. Kept
+# under this name so the many call sites below don't need touching if the
+# feature comes back.
+#
+# def _verify(client, user_id: str):
+#     token = create_email_verification_token(uuid.UUID(user_id))
+#     return client.get("/auth/verify", params={"token": token})
 def _signup_and_verify(client, email=EMAIL, password=PASSWORD):
     signup_resp = _signup(client, email, password)
-    _verify(client, signup_resp.json()["user_id"])
     return signup_resp.json()
 
 
-def test_signup_creates_unverified_user(client):
+def test_signup_creates_verified_user(client):
     resp = _signup(client)
 
     assert resp.status_code == 201
     body = resp.json()
     assert body["email"] == EMAIL
-    assert body["is_verified"] is False
+    assert body["is_verified"] is True
     assert body["permission"] == "student"
 
 
@@ -53,42 +51,42 @@ def test_signup_invalid_email_rejected(client):
     assert resp.status_code == 422
 
 
-def test_verify_marks_user_verified(client):
-    signup_resp = _signup(client)
-    resp = _verify(client, signup_resp.json()["user_id"])
-
-    assert resp.status_code == 200
-    assert resp.json()["is_verified"] is True
-
-
-def test_verify_is_idempotent(client):
-    signup_resp = _signup(client)
-    user_id = signup_resp.json()["user_id"]
-    _verify(client, user_id)
-    resp = _verify(client, user_id)
-
-    assert resp.status_code == 200
-    assert resp.json()["is_verified"] is True
-
-
-def test_verify_invalid_token_rejected(client):
-    resp = client.get("/auth/verify", params={"token": "garbage"})
-
-    assert resp.status_code == 400
-
-
-def test_verify_unknown_user_returns_404(client):
-    token = create_email_verification_token(uuid.uuid4())
-    resp = client.get("/auth/verify", params={"token": token})
-
-    assert resp.status_code == 404
-
-
-def test_login_unverified_user_rejected(client):
-    _signup(client)
-    resp = client.post("/auth/login", json={"email": EMAIL, "password": PASSWORD})
-
-    assert resp.status_code == 403
+# def test_verify_marks_user_verified(client):
+#     signup_resp = _signup(client)
+#     resp = _verify(client, signup_resp.json()["user_id"])
+#
+#     assert resp.status_code == 200
+#     assert resp.json()["is_verified"] is True
+#
+#
+# def test_verify_is_idempotent(client):
+#     signup_resp = _signup(client)
+#     user_id = signup_resp.json()["user_id"]
+#     _verify(client, user_id)
+#     resp = _verify(client, user_id)
+#
+#     assert resp.status_code == 200
+#     assert resp.json()["is_verified"] is True
+#
+#
+# def test_verify_invalid_token_rejected(client):
+#     resp = client.get("/auth/verify", params={"token": "garbage"})
+#
+#     assert resp.status_code == 400
+#
+#
+# def test_verify_unknown_user_returns_404(client):
+#     token = create_email_verification_token(uuid.uuid4())
+#     resp = client.get("/auth/verify", params={"token": token})
+#
+#     assert resp.status_code == 404
+#
+#
+# def test_login_unverified_user_rejected(client):
+#     _signup(client)
+#     resp = client.post("/auth/login", json={"email": EMAIL, "password": PASSWORD})
+#
+#     assert resp.status_code == 403
 
 
 def test_login_wrong_password_rejected(client):

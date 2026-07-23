@@ -78,6 +78,59 @@ def test_update_my_password_rejects_wrong_current_password(client, make_user, au
     assert resp.status_code == 403
 
 
+def test_delete_my_account(client, make_user, auth_header, db_session):
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+
+    resp = client.delete("/users/me", headers=auth_header(student))
+
+    assert resp.status_code == 204
+    assert db_session.get(type(student), student.user_id) is None
+
+
+def test_delete_my_account_requires_auth(client):
+    resp = client.delete("/users/me")
+
+    assert resp.status_code == 401
+
+
+def test_dev_can_delete_student(client, make_user, auth_header, db_session):
+    dev = make_user("dev@katecam.dev", UserPermission.DEV)
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+
+    resp = client.delete(f"/users/{student.user_id}", headers=auth_header(dev))
+
+    assert resp.status_code == 204
+    assert db_session.get(type(student), student.user_id) is None
+
+
+def test_manager_cannot_delete_user(client, make_user, auth_header):
+    manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+
+    resp = client.delete(f"/users/{student.user_id}", headers=auth_header(manager))
+
+    assert resp.status_code == 403
+
+
+def test_dev_cannot_delete_another_dev_via_admin_endpoint(client, make_user, auth_header):
+    dev = make_user("dev1@katecam.dev", UserPermission.DEV)
+    other_dev = make_user("dev2@katecam.dev", UserPermission.DEV)
+
+    resp = client.delete(f"/users/{other_dev.user_id}", headers=auth_header(dev))
+
+    assert resp.status_code == 403
+
+
+def test_delete_user_not_found(client, make_user, auth_header):
+    dev = make_user("dev@katecam.dev", UserPermission.DEV)
+
+    resp = client.delete(
+        "/users/00000000-0000-0000-0000-000000000000", headers=auth_header(dev)
+    )
+
+    assert resp.status_code == 404
+
+
 def test_read_user_dev_can_view_anyone(client, make_user, auth_header):
     dev = make_user("dev@katecam.dev", UserPermission.DEV)
     manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
