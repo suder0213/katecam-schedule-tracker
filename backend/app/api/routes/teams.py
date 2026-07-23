@@ -35,6 +35,19 @@ def list_teams(
     return db.query(Team).all()
 
 
+@router.get("/mine", response_model=list[TeamResponse])
+def list_my_teams(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[Team]:
+    return (
+        db.query(Team)
+        .join(TeamMember, TeamMember.team_id == Team.team_id)
+        .filter(TeamMember.user_id == current_user.user_id)
+        .all()
+    )
+
+
 @router.get("/{team_id}/members", response_model=list[SignupResponse])
 def list_team_members(
     team_id: uuid.UUID,

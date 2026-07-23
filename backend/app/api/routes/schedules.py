@@ -29,6 +29,10 @@ def _check_write_permission(current_user: User, schedule: Schedule) -> None:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Insufficient permission")
 
 
+def _visible_to(target_id: uuid.UUID):
+    return or_(Schedule.kind == ScheduleKind.SHARED, Schedule.owner_id == target_id)
+
+
 @router.get("", response_model=list[CalendarScheduleResponse])
 def list_schedules(
     year: int = Query(..., ge=2000, le=2100),
@@ -59,7 +63,7 @@ def list_schedules(
         .filter(
             Schedule.deadline >= month_start,
             Schedule.deadline < month_end,
-            or_(Schedule.kind == ScheduleKind.SHARED, Schedule.owner_id == target_id),
+            _visible_to(target_id),
         )
         .order_by(Schedule.deadline)
         .all()
@@ -84,6 +88,47 @@ def list_schedules(
             "created_at": s.created_at,
             "updated_at": s.updated_at,
             "done": done_by_schedule_id.get(s.schedule_id, False),
+        }
+        for s in schedules
+    ]
+
+
+@router.get("/todo", response_model=list[CalendarScheduleResponse])
+def list_todo_schedules(
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[dict]:
+    """사이드바 TODO 탭 — 본인 기준 미완료 일정을 마감일 임박순으로 반환(월 무관)."""
+    target_id = current_user.user_id
+
+    schedules = (
+        db.query(Schedule)
+        .outerjoin(
+            ScheduleCompletion,
+            (ScheduleCompletion.schedule_id == Schedule.schedule_id)
+            & (ScheduleCompletion.owner_id == target_id),
+        )
+        .filter(
+            _visible_to(target_id),
+            or_(ScheduleCompletion.done.is_(None), ScheduleCompletion.done.is_(False)),
+        )
+        .order_by(Schedule.deadline)
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {
+            "schedule_id": s.schedule_id,
+            "kind": s.kind,
+            "title": s.title,
+            "contents": s.contents,
+            "deadline": s.deadline,
+            "owner_id": s.owner_id,
+            "created_at": s.created_at,
+            "updated_at": s.updated_at,
+            "done": False,
         }
         for s in schedules
     ]

@@ -240,3 +240,39 @@ def test_remove_member_not_found(client, make_user, auth_header):
     )
 
     assert resp.status_code == 404
+
+
+def test_list_my_teams_returns_only_joined_teams(client, make_user, auth_header):
+    manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+    team_a = _create_team(client, manager, name="1팀")
+    _create_team(client, manager, name="2팀")
+
+    client.post(
+        f"/teams/{team_a}/members",
+        json={"user_id": str(student.user_id)},
+        headers=auth_header(student),
+    )
+
+    resp = client.get("/teams/mine", headers=auth_header(student))
+
+    assert resp.status_code == 200
+    names = [t["name"] for t in resp.json()]
+    assert names == ["1팀"]
+
+
+def test_list_my_teams_empty_when_not_joined(client, make_user, auth_header):
+    manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+    _create_team(client, manager)
+
+    resp = client.get("/teams/mine", headers=auth_header(student))
+
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+def test_list_my_teams_requires_auth(client):
+    resp = client.get("/teams/mine")
+
+    assert resp.status_code == 401
