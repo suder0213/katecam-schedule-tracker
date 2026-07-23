@@ -1,4 +1,5 @@
 import datetime
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
@@ -6,6 +7,7 @@ from app.core.llm import chat_model
 from app.models.crawl_text import CrawlText
 
 MAX_ANALYZE_ATTEMPTS = 3
+KST = ZoneInfo("Asia/Seoul")
 
 
 class AgentParseError(Exception):
@@ -15,7 +17,13 @@ class AgentParseError(Exception):
 class ProposedScheduleItem(BaseModel):
     title: str = Field(description="일정 제목")
     contents: str = Field(description="일정 내용/설명")
-    deadline: datetime.datetime = Field(description="마감 일시 (ISO 8601, 타임존 포함)")
+    deadline: datetime.datetime = Field(
+        description=(
+            "마감 일시. 한국 표준시(Asia/Seoul, UTC+9) 벽시계 시각을 그대로 쓰고, "
+            "ISO 8601 타임존 오프셋은 반드시 +09:00으로 표기 (예: 2026-08-28T19:00:00+09:00). "
+            "UTC로 환산하지 말 것."
+        )
+    )
 
 
 class ProposedScheduleItems(BaseModel):
@@ -25,13 +33,14 @@ class ProposedScheduleItems(BaseModel):
 
 
 def _build_prompt(crawl_text: CrawlText) -> str:
-    today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+    today = datetime.datetime.now(KST).strftime("%Y-%m-%d")
     return (
         "다음은 Discord 또는 Notion에서 수집한 원문 텍스트입니다. "
         "이 텍스트에서 학생들에게 공유할 일정(과제, 공지, 마감일 등)을 추출해서 "
         "구조화된 형태로 알려주세요. 일정이 아닌 잡담이나 마감일이 없는 내용은 무시하세요. "
-        f"오늘 날짜는 {today}(UTC)입니다. 상대적 날짜(예: 다음주 금요일)는 이 기준으로 "
-        "계산해서 절대 날짜로 변환해주세요.\n\n"
+        f"오늘 날짜는 {today}이고, 원문에 나오는 모든 시각(예: 오후 7시)은 "
+        "한국 표준시(Asia/Seoul, UTC+9) 기준입니다. 상대적 날짜(예: 다음주 금요일)는 "
+        "이 기준으로 계산해서 절대 날짜로 변환해주세요.\n\n"
         f"--- 원문 ---\n{crawl_text.raw_text}"
     )
 
