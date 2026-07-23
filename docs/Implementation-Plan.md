@@ -67,6 +67,8 @@
 
 ## Phase 2. 인증 (Auth)
 
+> **MVP 범위 축소 (Phase 6 착수 전 결정).** 이메일 인증(2-2/2-3, AWS SES 연동 포함)과 rate limiting(2-8)을 실제로는 끄기로 함 — 학생 규모(200명 안팎)에서 악용 가능성이 낮다고 판단, 이메일 인증은 실제 메일 발송 인프라(SES 샌드박스 해제 등) 구축 비용 대비 이득이 낮음. 회원가입 시 `is_verified=True`로 즉시 활성화하고, 악용 계정은 관리자가 직접 삭제(Phase 3-1 계정 관리 기능)하는 방식으로 대응. rate limiting은 `RATE_LIMIT_ENABLED=false`가 기본값. 두 기능 모두 코드/테스트는 삭제하지 않고 주석 처리 또는 스킵 처리로 남겨서 필요해지면 다시 켤 수 있게 함 — 이에 따라 **Phase 6 배포에는 SES 연동이 포함되지 않음**.
+
 목표: 이메일 인증 기반 회원가입/로그인과 JWT 발급 체계 (결정 #10/#12/#21) 구현. 이후 모든 API가 인증에 의존하므로 Phase 1 다음으로 최우선.
 
 2-1. 비밀번호 해싱 유틸
@@ -230,13 +232,30 @@
 
 ## Phase 6. 배포
 
-목표: AWS EC2/RDS 기반 배포 (결정 #11 백업은 EC2 로컬 폴더 유지).
+> **RDS는 쓰지 않고 db까지 포함해 전부 EC2 위 Docker Compose로 배포하기로 확정.** 초안의 "우선 EC2 Docker, 추후 RDS 이관" 방향 그대로 — 현재 규모(200명 안팎)에서는 RDS로 옮길 필요가 없다고 판단. 프론트엔드도 별도 S3+CloudFront 없이 같은 EC2에서 Docker Compose로 함께 서빙(로컬 개발 구성과 최대한 동일하게 유지해 배포/디버깅 복잡도를 낮춤). 이메일 인증을 껐으므로(Phase 2 참고) SES 연동도 이번 배포 범위에 없음.
 
-6-1. EC2에 Docker Compose로 backend+db 배포 (또는 db는 우선 EC2 Docker, 추후 RDS 이관)
-6-2. 프론트엔드 빌드 산출물 배포 (S3+CloudFront 또는 동일 EC2 nginx 서빙)
-6-3. 환경변수/시크릿 관리 (.env를 실제 서버에만 배치, git에는 커밋 금지)
+목표: AWS EC2 단일 인스턴스에 Docker Compose로 전체 스택(db+backend+frontend) 배포, HTTPS 적용까지 (결정 #11 백업은 EC2 로컬 폴더 유지).
+
+6-1. EC2 인스턴스 준비
+   - 인스턴스 생성, Docker/Docker Compose 설치, 보안 그룹에서 80/443(및 임시로 8000/5173) 오픈
+   - verify: EC2에 SSH 접속해 `docker compose version` 확인
+
+6-2. 프로덕션용 Docker Compose 배포 (db+backend+frontend 전부 EC2에)
+   - 로컬 `docker-compose.yml`과 동일 구조 유지, backend `--reload` 제거 등 프로덕션에 맞게 조정
+   - db 컨테이너 볼륨은 EC2 로컬 디스크에 유지(RDS 미사용)
+   - verify: EC2에서 `docker compose up -d` 후 backend `/health`와 frontend 응답 확인
+
+6-3. 환경변수/시크릿 관리
+   - `.env`는 EC2에만 배치, git에는 커밋하지 않음(`JWT_SECRET`, `PROXY_TOKEN` 등)
+   - verify: 저장소에 시크릿이 커밋되지 않았는지 재확인, EC2 `.env` 파일 권한 제한
+
 6-4. HTTPS 설정 (refresh 쿠키가 Secure 속성이므로 필수)
+   - Nginx(또는 Caddy) 리버스 프록시 + Let's Encrypt(certbot)으로 인증서 발급, HTTP→HTTPS 리다이렉트
    - verify: 배포된 도메인에서 로그인~완료체크~Agent 계획 승인까지 전체 플로우 1회 수동 통과
+
+6-5. (참고, 범위 밖) 이메일 발송 / RDS 이관
+   - 이메일 인증은 Phase 2에서 이미 MVP 범위 밖으로 뺐으므로 SES 연동은 불필요
+   - 사용자 규모가 늘어나 RDS 이관이 실제로 필요해지면 별도 단계로 진행
 
 ---
 
