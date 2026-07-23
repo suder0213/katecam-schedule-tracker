@@ -21,7 +21,7 @@ export function AdminUsersPage() {
   function load() {
     setIsLoading(true)
     usersApi
-      .listAllUsers()
+      .listUsers()
       .then(setUsers)
       .catch(() => setError('불러오지 못했습니다.'))
       .finally(() => setIsLoading(false))

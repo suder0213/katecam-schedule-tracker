@@ -19,24 +19,14 @@ def read_current_user(user: User = Depends(get_current_user)) -> User:
 
 
 @router.get("", response_model=list[SignupResponse])
-def list_students(
+def list_users(
     _current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[User]:
-    return (
-        db.query(User)
-        .filter(User.permission == UserPermission.STUDENT)
-        .order_by(User.nick_name)
-        .all()
-    )
-
-
-@router.get("/all", response_model=list[SignupResponse])
-def list_all_users(
-    _current_user: User = Depends(require_permission(UserPermission.DEV)),
-    db: Session = Depends(get_db),
-) -> list[User]:
-    return db.query(User).order_by(User.nick_name).all()
+    # Sorted in Python, not SQL: the DB's en_US.utf8 collation doesn't order Hangul
+    # the way a Korean dictionary does, but Python's codepoint order does, since the
+    # Unicode Hangul Syllables block is laid out by (initial, medial, final).
+    return sorted(db.query(User).all(), key=lambda u: u.nick_name or u.email)
 
 
 @router.get("/{user_id}", response_model=SignupResponse)

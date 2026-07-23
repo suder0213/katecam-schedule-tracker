@@ -58,23 +58,30 @@ export function TodoTab() {
       {schedules.map((s) => (
         <li
           key={s.schedule_id}
-          className="flex items-center gap-2 rounded-lg border border-neutral-100 px-2.5 py-2 text-sm"
+          className="flex items-start gap-2 rounded-lg border border-neutral-100 px-2.5 py-2 text-sm"
         >
           <input
             type="checkbox"
             checked={false}
             onChange={() => void handleComplete(s)}
-            className="shrink-0"
+            className="mt-0.5 shrink-0"
           />
-          <span
-            className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
-              s.kind === 'shared' ? 'bg-kakao-yellow text-kakao-black' : 'bg-neutral-200 text-neutral-700'
-            }`}
-          >
-            {s.kind === 'shared' ? '공유' : '개인'}
-          </span>
-          <span className="flex-1 truncate text-kakao-black">{s.title}</span>
-          <span className="shrink-0 text-xs text-neutral-400">{formatDeadline(s.deadline)}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span
+                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                  s.kind === 'shared'
+                    ? 'bg-kakao-yellow text-kakao-black'
+                    : 'bg-neutral-200 text-neutral-700'
+                }`}
+              >
+                {s.kind === 'shared' ? '공유' : '개인'}
+              </span>
+              <span className="flex-1 truncate text-kakao-black">{s.title}</span>
+              <span className="shrink-0 text-xs text-neutral-400">{formatDeadline(s.deadline)}</span>
+            </div>
+            {s.contents && <p className="mt-0.5 truncate text-xs text-neutral-500">{s.contents}</p>}
+          </div>
         </li>
       ))}
     </ul>

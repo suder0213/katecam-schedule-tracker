@@ -42,6 +42,6 @@ export async function updateCompletion(id: string, done: boolean): Promise<{ don
   return api.put<{ done: boolean }>(`/schedules/${id}/completion`, { done })
 }
 
-export async function listTodoSchedules(limit = 20): Promise<Schedule[]> {
+export async function listTodoSchedules(limit = 10): Promise<Schedule[]> {
   return api.get<Schedule[]>(`/schedules/todo?limit=${limit}`)
 }

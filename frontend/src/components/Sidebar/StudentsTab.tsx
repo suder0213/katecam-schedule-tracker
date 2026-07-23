@@ -14,7 +14,7 @@ export function StudentsTab({ onSelect }: StudentsTabProps) {
   useEffect(() => {
     let cancelled = false
     usersApi
-      .listStudents()
+      .listUsers()
       .then((data) => {
         if (!cancelled) setStudents(data)
       })
