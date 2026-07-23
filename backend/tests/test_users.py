@@ -24,6 +24,60 @@ def test_list_users_visible_to_student(client, make_user, auth_header):
     assert len(resp.json()) == 2
 
 
+def test_update_my_nickname(client, make_user, auth_header):
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+
+    resp = client.patch(
+        "/users/me/nick-name",
+        json={"nick_name": "새닉네임"},
+        headers=auth_header(student),
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["nick_name"] == "새닉네임"
+
+
+def test_update_my_nickname_rejects_empty(client, make_user, auth_header):
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+
+    resp = client.patch(
+        "/users/me/nick-name",
+        json={"nick_name": ""},
+        headers=auth_header(student),
+    )
+
+    assert resp.status_code == 422
+
+
+def test_update_my_password(client, make_user, auth_header):
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+
+    resp = client.patch(
+        "/users/me/password",
+        json={"current_password": "password123", "new_password": "newpassword456"},
+        headers=auth_header(student),
+    )
+    assert resp.status_code == 204
+
+    login_resp = client.post(
+        "/auth/login",
+        json={"email": student.email, "password": "newpassword456"},
+    )
+    assert login_resp.status_code == 200
+
+
+def test_update_my_password_rejects_wrong_current_password(client, make_user, auth_header):
+    student = make_user("student@katecam.dev", UserPermission.STUDENT)
+
+    resp = client.patch(
+        "/users/me/password",
+        json={"current_password": "wrongpassword", "new_password": "newpassword456"},
+        headers=auth_header(student),
+    )
+
+    assert resp.status_code == 403
+
+
 def test_read_user_dev_can_view_anyone(client, make_user, auth_header):
     dev = make_user("dev@katecam.dev", UserPermission.DEV)
     manager = make_user("manager@katecam.dev", UserPermission.MANAGER)

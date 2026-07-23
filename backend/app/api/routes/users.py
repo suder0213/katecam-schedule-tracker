@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, require_permission
+from app.core.security import hash_password, verify_password
 from app.models.user import User, UserPermission
 from app.schemas.auth import SignupResponse
-from app.schemas.user import UpdatePermissionRequest
+from app.schemas.user import ChangePasswordRequest, UpdateNicknameRequest, UpdatePermissionRequest
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -16,6 +17,32 @@ CHANGEABLE_PERMISSIONS = {UserPermission.STUDENT, UserPermission.MANAGER}
 @router.get("/me", response_model=SignupResponse)
 def read_current_user(user: User = Depends(get_current_user)) -> User:
     return user
+
+
+@router.patch("/me/nick-name", response_model=SignupResponse)
+def update_my_nickname(
+    payload: UpdateNicknameRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> User:
+    current_user.nick_name = payload.nick_name
+    db.commit()
+    db.refresh(current_user)
+
+    return current_user
+
+
+@router.patch("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+def update_my_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    if not verify_password(payload.current_password, current_user.password):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Current password is incorrect")
+
+    current_user.password = hash_password(payload.new_password)
+    db.commit()
 
 
 @router.get("", response_model=list[SignupResponse])

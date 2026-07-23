@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { AccountSettingsModal } from './AccountSettingsModal'
 
 const PERMISSION_LABEL: Record<string, string> = {
   student: '학생',
@@ -10,6 +12,7 @@ const PERMISSION_LABEL: Record<string, string> = {
 export function AppHeader() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   async function handleLogout() {
     await logout()
@@ -35,12 +38,16 @@ export function AppHeader() {
       </div>
       <div className="flex items-center gap-3">
         {user && (
-          <span className="text-sm text-kakao-black">
+          <button
+            type="button"
+            onClick={() => setIsSettingsOpen(true)}
+            className="text-sm text-kakao-black hover:underline"
+          >
             {user.nick_name ?? user.email}
             <span className="ml-1 rounded-full bg-white/60 px-2 py-0.5 text-xs">
               {PERMISSION_LABEL[user.permission] ?? user.permission}
             </span>
-          </span>
+          </button>
         )}
         <button
           type="button"
@@ -50,6 +57,7 @@ export function AppHeader() {
           로그아웃
         </button>
       </div>
+      {isSettingsOpen && <AccountSettingsModal onClose={() => setIsSettingsOpen(false)} />}
     </header>
   )
 }
