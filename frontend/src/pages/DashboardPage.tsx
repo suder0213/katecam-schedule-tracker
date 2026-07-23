@@ -1,12 +1,17 @@
+import { useAuth } from '../auth/AuthContext'
 import { AppHeader } from '../components/AppHeader'
+import { MonthCalendar } from '../components/Calendar/MonthCalendar'
 
 export function DashboardPage() {
+  const { user } = useAuth()
+
   return (
     <div className="min-h-screen bg-neutral-50">
       <AppHeader />
-      <main className="flex items-center justify-center p-10 text-neutral-400">
-        달력 화면은 다음 단계에서 구현됩니다.
-      </main>
+      {/* manager/dev must always pass student_id to GET /schedules (even for their
+          own calendar) — student can omit it and the backend defaults to self, but
+          passing it explicitly here works for all three roles uniformly. */}
+      {user && <MonthCalendar studentId={user.user_id} />}
     </div>
   )
 }
