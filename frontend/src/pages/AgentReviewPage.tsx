@@ -17,6 +17,12 @@ function formatDeadline(iso: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${hh}:${mm}`
 }
 
+function toDatetimeLocalValue(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 export function AgentReviewPage() {
   const [source, setSource] = useState<CrawlSource>('notion')
   const [channel, setChannel] = useState('')
@@ -28,6 +34,12 @@ export function AgentReviewPage() {
   const [crawlTexts, setCrawlTexts] = useState<Record<string, CrawlText>>({})
   const [listError, setListError] = useState<string | null>(null)
   const [actionPendingId, setActionPendingId] = useState<string | null>(null)
+
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editContents, setEditContents] = useState('')
+  const [editDeadline, setEditDeadline] = useState('')
+  const [editError, setEditError] = useState<string | null>(null)
 
   function loadProposals() {
     agentApi
@@ -129,6 +141,36 @@ export function AgentReviewPage() {
     }
   }
 
+  function startEditing(proposal: ScheduleProposal) {
+    setEditingId(proposal.proposal_id)
+    setEditTitle(proposal.title)
+    setEditContents(proposal.contents)
+    setEditDeadline(toDatetimeLocalValue(proposal.deadline))
+    setEditError(null)
+  }
+
+  async function handleSaveEdit(proposal: ScheduleProposal) {
+    setEditError(null)
+    if (!editTitle.trim() || !editContents.trim() || !editDeadline) {
+      setEditError('모든 항목을 입력하세요.')
+      return
+    }
+    setActionPendingId(proposal.proposal_id)
+    try {
+      await agentApi.updateProposal(proposal.proposal_id, {
+        title: editTitle.trim(),
+        contents: editContents.trim(),
+        deadline: new Date(editDeadline).toISOString(),
+      })
+      setEditingId(null)
+      loadProposals()
+    } catch {
+      setEditError('수정에 실패했습니다.')
+    } finally {
+      setActionPendingId(null)
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-neutral-50">
       <AppHeader />
@@ -186,51 +228,105 @@ export function AgentReviewPage() {
                 {crawlTexts[rawTextId]?.raw_text ?? '원문 불러오는 중...'}
               </p>
               <ul className="flex flex-col gap-2">
-                {group.map((p) => (
-                  <li
-                    key={p.proposal_id}
-                    className="flex items-center justify-between rounded-lg border border-neutral-100 px-3 py-2"
-                  >
-                    <div>
-                      <p className="font-medium text-kakao-black">{p.title}</p>
-                      <p className="text-xs text-neutral-500">{p.contents}</p>
-                      <p className="text-xs text-neutral-400">{formatDeadline(p.deadline)}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                          p.status === 'approved'
-                            ? 'bg-green-100 text-green-700'
-                            : p.status === 'rejected'
-                              ? 'bg-red-100 text-red-600'
-                              : 'bg-neutral-100 text-neutral-600'
-                        }`}
-                      >
-                        {STATUS_LABEL[p.status]}
-                      </span>
-                      {p.status === 'pending' && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => void handleApprove(p)}
-                            disabled={actionPendingId === p.proposal_id}
-                            className="rounded-lg bg-kakao-yellow px-2.5 py-1 text-xs font-semibold text-kakao-black hover:bg-kakao-yellow-dark disabled:opacity-50"
-                          >
-                            승인
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleReject(p)}
-                            disabled={actionPendingId === p.proposal_id}
-                            className="rounded-lg border border-neutral-200 px-2.5 py-1 text-xs text-neutral-500 hover:bg-neutral-100 disabled:opacity-50"
-                          >
-                            거절
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </li>
-                ))}
+                {group.map((p) =>
+                  editingId === p.proposal_id ? (
+                    <li
+                      key={p.proposal_id}
+                      className="flex flex-col gap-2 rounded-lg border border-kakao-yellow-dark px-3 py-2"
+                    >
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        placeholder="제목"
+                        className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                      />
+                      <textarea
+                        value={editContents}
+                        onChange={(e) => setEditContents(e.target.value)}
+                        placeholder="내용"
+                        rows={2}
+                        className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                      />
+                      <input
+                        type="datetime-local"
+                        value={editDeadline}
+                        onChange={(e) => setEditDeadline(e.target.value)}
+                        className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                      />
+                      {editError && <p className="text-xs text-red-500">{editError}</p>}
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          className="rounded-lg border border-neutral-200 px-2.5 py-1 text-xs text-neutral-500 hover:bg-neutral-100"
+                        >
+                          취소
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleSaveEdit(p)}
+                          disabled={actionPendingId === p.proposal_id}
+                          className="rounded-lg bg-kakao-yellow px-2.5 py-1 text-xs font-semibold text-kakao-black hover:bg-kakao-yellow-dark disabled:opacity-50"
+                        >
+                          저장
+                        </button>
+                      </div>
+                    </li>
+                  ) : (
+                    <li
+                      key={p.proposal_id}
+                      className="flex items-center justify-between rounded-lg border border-neutral-100 px-3 py-2"
+                    >
+                      <div>
+                        <p className="font-medium text-kakao-black">{p.title}</p>
+                        <p className="text-xs text-neutral-500">{p.contents}</p>
+                        <p className="text-xs text-neutral-400">{formatDeadline(p.deadline)}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                            p.status === 'approved'
+                              ? 'bg-green-100 text-green-700'
+                              : p.status === 'rejected'
+                                ? 'bg-red-100 text-red-600'
+                                : 'bg-neutral-100 text-neutral-600'
+                          }`}
+                        >
+                          {STATUS_LABEL[p.status]}
+                        </span>
+                        {p.status === 'pending' && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => startEditing(p)}
+                              disabled={actionPendingId === p.proposal_id}
+                              className="rounded-lg border border-neutral-200 px-2.5 py-1 text-xs text-neutral-500 hover:bg-neutral-100 disabled:opacity-50"
+                            >
+                              수정
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleApprove(p)}
+                              disabled={actionPendingId === p.proposal_id}
+                              className="rounded-lg bg-kakao-yellow px-2.5 py-1 text-xs font-semibold text-kakao-black hover:bg-kakao-yellow-dark disabled:opacity-50"
+                            >
+                              승인
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleReject(p)}
+                              disabled={actionPendingId === p.proposal_id}
+                              className="rounded-lg border border-neutral-200 px-2.5 py-1 text-xs text-neutral-500 hover:bg-neutral-100 disabled:opacity-50"
+                            >
+                              거절
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </li>
+                  ),
+                )}
               </ul>
             </div>
           ))}

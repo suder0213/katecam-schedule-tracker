@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import * as scheduleApi from '../../api/schedules'
 import type { Schedule } from '../../types/schedule'
 import { useScheduleSync } from '../../context/ScheduleSyncContext'
+import { ScheduleDetailModal } from '../Calendar/ScheduleDetailModal'
 
 function formatDeadline(iso: string): string {
   const d = new Date(iso)
@@ -15,6 +16,7 @@ export function TodoTab() {
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Schedule | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -54,36 +56,50 @@ export function TodoTab() {
   }
 
   return (
-    <ul className="flex flex-col gap-1.5 p-3">
-      {schedules.map((s) => (
-        <li
-          key={s.schedule_id}
-          className="flex items-start gap-2 rounded-lg border border-neutral-100 px-2.5 py-2 text-sm"
-        >
-          <input
-            type="checkbox"
-            checked={false}
-            onChange={() => void handleComplete(s)}
-            className="mt-0.5 shrink-0"
-          />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span
-                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                  s.kind === 'shared'
-                    ? 'bg-kakao-yellow text-kakao-black'
-                    : 'bg-neutral-200 text-neutral-700'
-                }`}
-              >
-                {s.kind === 'shared' ? '공유' : '개인'}
-              </span>
-              <span className="flex-1 truncate text-kakao-black">{s.title}</span>
-              <span className="shrink-0 text-xs text-neutral-400">{formatDeadline(s.deadline)}</span>
+    <>
+      <ul className="flex flex-col gap-1.5 p-3">
+        {schedules.map((s) => (
+          <li
+            key={s.schedule_id}
+            onClick={() => setSelected(s)}
+            className="flex cursor-pointer items-start gap-2 rounded-lg border border-neutral-100 px-2.5 py-2 text-sm hover:bg-neutral-50"
+          >
+            <input
+              type="checkbox"
+              checked={false}
+              onClick={(e) => e.stopPropagation()}
+              onChange={() => void handleComplete(s)}
+              className="mt-0.5 shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                    s.kind === 'shared'
+                      ? 'bg-kakao-yellow text-kakao-black'
+                      : 'bg-neutral-200 text-neutral-700'
+                  }`}
+                >
+                  {s.kind === 'shared' ? '공유' : '개인'}
+                </span>
+                <span className="flex-1 truncate text-kakao-black">{s.title}</span>
+                <span className="shrink-0 text-xs text-neutral-400">{formatDeadline(s.deadline)}</span>
+              </div>
+              {s.contents && <p className="mt-0.5 truncate text-xs text-neutral-500">{s.contents}</p>}
             </div>
-            {s.contents && <p className="mt-0.5 truncate text-xs text-neutral-500">{s.contents}</p>}
-          </div>
-        </li>
-      ))}
-    </ul>
+          </li>
+        ))}
+      </ul>
+
+      {selected && (
+        <ScheduleDetailModal
+          schedule={selected}
+          onClose={() => setSelected(null)}
+          onChanged={async () => {
+            notifyChanged()
+          }}
+        />
+      )}
+    </>
   )
 }

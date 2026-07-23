@@ -22,6 +22,13 @@ export async function listProposals(): Promise<ScheduleProposal[]> {
   return api.get<ScheduleProposal[]>('/schedule-proposals')
 }
 
+export async function updateProposal(
+  proposalId: string,
+  payload: { title?: string; contents?: string; deadline?: string },
+): Promise<ScheduleProposal> {
+  return api.patch<ScheduleProposal>(`/schedule-proposals/${proposalId}`, payload)
+}
+
 export async function approveProposal(proposalId: string): Promise<ScheduleProposal> {
   return api.post<ScheduleProposal>(`/schedule-proposals/${proposalId}/approve`)
 }

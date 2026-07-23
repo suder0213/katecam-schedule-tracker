@@ -3,6 +3,7 @@ import { useAuth } from '../../auth/AuthContext'
 import * as scheduleApi from '../../api/schedules'
 import type { Schedule } from '../../types/schedule'
 import { ScheduleForm } from './ScheduleForm'
+import { formatTime } from './dateUtils'
 
 interface DayDetailModalProps {
   date: Date
@@ -114,6 +115,7 @@ export function DayDetailModal({
                         >
                           {s.title}
                         </span>
+                        <span className="text-xs text-neutral-400">{formatTime(new Date(s.deadline))}</span>
                       </div>
                       <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-500">
                         {s.contents}

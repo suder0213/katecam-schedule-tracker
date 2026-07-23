@@ -7,7 +7,7 @@ from app.api.deps import get_db, require_permission
 from app.models.schedule import Schedule, ScheduleKind
 from app.models.schedule_proposal import ProposalStatus, ScheduleProposal
 from app.models.user import UserPermission
-from app.schemas.schedule_proposal import ScheduleProposalResponse
+from app.schemas.schedule_proposal import ScheduleProposalResponse, ScheduleProposalUpdate
 
 router = APIRouter(prefix="/schedule-proposals", tags=["schedule-proposals"])
 
@@ -23,6 +23,29 @@ def list_schedule_proposals(
         query = query.filter(ScheduleProposal.raw_text_id == raw_text_id)
 
     return query.order_by(ScheduleProposal.created_at).all()
+
+
+@router.patch("/{proposal_id}", response_model=ScheduleProposalResponse)
+def update_schedule_proposal(
+    proposal_id: uuid.UUID,
+    payload: ScheduleProposalUpdate,
+    db: Session = Depends(get_db),
+    _current_user=Depends(require_permission(UserPermission.DEV)),
+) -> ScheduleProposal:
+    proposal = db.get(ScheduleProposal, proposal_id)
+    if proposal is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Proposal not found")
+
+    if proposal.status != ProposalStatus.PENDING:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Only pending proposals can be edited")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(proposal, field, value)
+
+    db.commit()
+    db.refresh(proposal)
+
+    return proposal
 
 
 @router.post("/{proposal_id}/approve", response_model=ScheduleProposalResponse)

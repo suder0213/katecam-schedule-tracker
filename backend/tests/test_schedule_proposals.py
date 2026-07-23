@@ -86,6 +86,63 @@ def test_list_proposals_requires_dev(client, make_user, auth_header):
     assert resp.status_code == 403
 
 
+def test_update_pending_proposal(client, make_user, auth_header, db_session):
+    dev = make_user("dev@katecam.dev", UserPermission.DEV)
+    _, proposal = _make_proposal(db_session, title="원래 제목")
+
+    new_deadline = datetime.datetime(2026, 7, 25, 9, 0, tzinfo=datetime.timezone.utc)
+    resp = client.patch(
+        f"/schedule-proposals/{proposal.proposal_id}",
+        json={"title": "수정된 제목", "deadline": new_deadline.isoformat()},
+        headers=auth_header(dev),
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["title"] == "수정된 제목"
+    assert body["contents"] == "내용"
+    assert body["deadline"] == new_deadline.isoformat().replace("+00:00", "Z")
+
+
+def test_update_proposal_requires_dev(client, make_user, auth_header, db_session):
+    manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
+    _, proposal = _make_proposal(db_session)
+
+    resp = client.patch(
+        f"/schedule-proposals/{proposal.proposal_id}",
+        json={"title": "수정 시도"},
+        headers=auth_header(manager),
+    )
+
+    assert resp.status_code == 403
+
+
+def test_update_already_processed_proposal_rejected(client, make_user, auth_header, db_session):
+    dev = make_user("dev@katecam.dev", UserPermission.DEV)
+    _, proposal = _make_proposal(db_session)
+    client.post(f"/schedule-proposals/{proposal.proposal_id}/approve", headers=auth_header(dev))
+
+    resp = client.patch(
+        f"/schedule-proposals/{proposal.proposal_id}",
+        json={"title": "수정 시도"},
+        headers=auth_header(dev),
+    )
+
+    assert resp.status_code == 409
+
+
+def test_update_proposal_not_found(client, make_user, auth_header):
+    dev = make_user("dev@katecam.dev", UserPermission.DEV)
+
+    resp = client.patch(
+        "/schedule-proposals/00000000-0000-0000-0000-000000000000",
+        json={"title": "수정 시도"},
+        headers=auth_header(dev),
+    )
+
+    assert resp.status_code == 404
+
+
 def test_approve_creates_shared_schedule(client, make_user, auth_header, db_session):
     dev = make_user("dev@katecam.dev", UserPermission.DEV)
     _, proposal = _make_proposal(db_session, title="기획서 제출")

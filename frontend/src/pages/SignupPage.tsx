@@ -6,6 +6,7 @@ import { ApiError } from '../api/client'
 export function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [nickName, setNickName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -14,6 +15,10 @@ export function SignupPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    if (password !== confirmPassword) {
+      setError('비밀번호가 일치하지 않습니다.')
+      return
+    }
     setIsSubmitting(true)
     try {
       await authApi.signup(email, password, nickName)
@@ -81,6 +86,15 @@ export function SignupPage() {
             placeholder="비밀번호 (8자 이상)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="rounded-lg border border-neutral-200 px-4 py-3 text-sm outline-none focus:border-kakao-yellow-dark"
+          />
+          <input
+            type="password"
+            required
+            minLength={8}
+            placeholder="비밀번호 확인"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
             className="rounded-lg border border-neutral-200 px-4 py-3 text-sm outline-none focus:border-kakao-yellow-dark"
           />
 
