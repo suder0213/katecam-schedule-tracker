@@ -10,5 +10,13 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 90
 
+    proxy_token: str = ""
+    chat_proxy_url: str = ""
+    openai_model: str = ""
+
+    @property
+    def has_openai_key(self) -> bool:
+        return bool(self.proxy_token)
+
 
 settings = Settings()
