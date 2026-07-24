@@ -62,3 +62,22 @@ jobs:
       - run: curl -sf http://localhost:8000/health
       - run: curl -sf -o /dev/null http://localhost:5173/
       - run: docker compose down
+
+  deploy:
+    needs: [backend, frontend, docker-compose]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/katecam-schedule-tracker
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+            docker compose -f docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
