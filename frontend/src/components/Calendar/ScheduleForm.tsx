@@ -58,7 +58,7 @@ export function ScheduleForm({ date, existing, allowShared, onCancel, onSaved }:
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <h3 className="text-lg font-bold text-kakao-black">
+      <h3 className="text-xl font-bold text-kakao-black">
         {existing ? '일정 수정' : '새 일정'} · {date.getMonth() + 1}월 {date.getDate()}일
       </h3>
 

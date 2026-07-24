@@ -18,7 +18,7 @@ router = APIRouter(prefix="/crawl-texts", tags=["crawl-texts"])
 def create_crawl_text(
     payload: CrawlTextCreate,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.DEV)),
+    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
 ) -> CrawlText:
     crawl_text = CrawlText(
         source=payload.source,
@@ -36,7 +36,7 @@ def create_crawl_text(
 def read_crawl_text(
     raw_text_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.DEV)),
+    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
 ) -> CrawlText:
     crawl_text = db.get(CrawlText, raw_text_id)
     if crawl_text is None:
@@ -53,7 +53,7 @@ def read_crawl_text(
 def analyze_text(
     raw_text_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.DEV)),
+    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
 ) -> list[ScheduleProposal]:
     crawl_text = db.get(CrawlText, raw_text_id)
     if crawl_text is None:

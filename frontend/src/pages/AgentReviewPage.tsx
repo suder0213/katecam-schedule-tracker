@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as agentApi from '../api/agent'
 import { AppHeader } from '../components/AppHeader'
 import type { CrawlSource, CrawlText } from '../types/crawlText'
@@ -40,6 +40,12 @@ export function AgentReviewPage() {
   const [editContents, setEditContents] = useState('')
   const [editDeadline, setEditDeadline] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
+
+  const itemRefs = useRef<Record<string, HTMLLIElement | null>>({})
+
+  function scrollToProposal(proposalId: string) {
+    itemRefs.current[proposalId]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 
   function loadProposals() {
     agentApi
@@ -87,6 +93,14 @@ export function AgentReviewPage() {
       b[0].created_at.localeCompare(a[0].created_at),
     )
   }, [proposals])
+
+  const pendingProposals = useMemo(
+    () =>
+      proposals
+        .filter((p) => p.status === 'pending')
+        .sort((a, b) => a.deadline.localeCompare(b.deadline)),
+    [proposals],
+  )
 
   async function handleSubmit() {
     setFormError(null)
@@ -174,7 +188,8 @@ export function AgentReviewPage() {
   return (
     <div className="flex min-h-screen flex-col bg-neutral-50">
       <AppHeader />
-      <div className="mx-auto w-full max-w-3xl p-6">
+      <div className="mx-auto flex w-full max-w-5xl gap-6 p-6">
+        <div className="min-w-0 flex-1">
         <h2 className="mb-4 text-lg font-bold text-kakao-black">Agent 검토</h2>
 
         <div className="mb-6 rounded-xl border border-neutral-200 bg-white p-4">
@@ -232,6 +247,9 @@ export function AgentReviewPage() {
                   editingId === p.proposal_id ? (
                     <li
                       key={p.proposal_id}
+                      ref={(el) => {
+                        itemRefs.current[p.proposal_id] = el
+                      }}
                       className="flex flex-col gap-2 rounded-lg border border-kakao-yellow-dark px-3 py-2"
                     >
                       <input
@@ -276,6 +294,9 @@ export function AgentReviewPage() {
                   ) : (
                     <li
                       key={p.proposal_id}
+                      ref={(el) => {
+                        itemRefs.current[p.proposal_id] = el
+                      }}
                       className="flex items-center justify-between rounded-lg border border-neutral-100 px-3 py-2"
                     >
                       <div>
@@ -331,6 +352,31 @@ export function AgentReviewPage() {
             </div>
           ))}
         </div>
+        </div>
+
+        <aside className="w-56 shrink-0">
+          <div className="sticky top-6 rounded-xl border border-neutral-200 bg-white p-3">
+            <p className="mb-2 text-sm font-bold text-kakao-black">대기중 ({pendingProposals.length})</p>
+            {pendingProposals.length === 0 ? (
+              <p className="text-xs text-neutral-400">대기중인 제안이 없습니다.</p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {pendingProposals.map((p) => (
+                  <li key={p.proposal_id}>
+                    <button
+                      type="button"
+                      onClick={() => scrollToProposal(p.proposal_id)}
+                      className="w-full rounded-lg px-2 py-1.5 text-left text-xs hover:bg-neutral-100"
+                    >
+                      <p className="truncate font-medium text-kakao-black">{p.title}</p>
+                      <p className="text-neutral-400">{formatDeadline(p.deadline)}</p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </aside>
       </div>
     </div>
   )

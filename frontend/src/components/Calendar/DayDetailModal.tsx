@@ -67,11 +67,11 @@ export function DayDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-      <div className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-lg">
+      <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-lg">
         {mode === 'list' && (
           <>
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-kakao-black">
+              <h3 className="text-xl font-bold text-kakao-black">
                 {date.getMonth() + 1}월 {date.getDate()}일
               </h3>
               <button
@@ -102,7 +102,7 @@ export function DayDetailModal({
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5">
                         <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                          className={`rounded px-1.5 py-0.5 text-xs font-medium ${
                             s.kind === 'shared'
                               ? 'bg-kakao-yellow text-kakao-black'
                               : 'bg-neutral-200 text-neutral-700'
@@ -115,7 +115,7 @@ export function DayDetailModal({
                         >
                           {s.title}
                         </span>
-                        <span className="text-xs text-neutral-400">{formatTime(new Date(s.deadline))}</span>
+                        <span className="text-sm text-neutral-400">{formatTime(new Date(s.deadline))}</span>
                       </div>
                       <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-500">
                         {s.contents}
@@ -123,7 +123,7 @@ export function DayDetailModal({
                     </div>
                   </div>
                   {canEdit(s) && (
-                    <div className="mt-2 flex justify-end gap-3 text-xs">
+                    <div className="mt-2 flex justify-end gap-3 text-sm">
                       <button
                         type="button"
                         onClick={() => setMode({ edit: s })}

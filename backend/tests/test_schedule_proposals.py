@@ -104,7 +104,7 @@ def test_update_pending_proposal(client, make_user, auth_header, db_session):
     assert body["deadline"] == new_deadline.isoformat().replace("+00:00", "Z")
 
 
-def test_update_proposal_requires_dev(client, make_user, auth_header, db_session):
+def test_update_proposal_allows_manager(client, make_user, auth_header, db_session):
     manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
     _, proposal = _make_proposal(db_session)
 
@@ -114,7 +114,7 @@ def test_update_proposal_requires_dev(client, make_user, auth_header, db_session
         headers=auth_header(manager),
     )
 
-    assert resp.status_code == 403
+    assert resp.status_code == 200
 
 
 def test_update_already_processed_proposal_rejected(client, make_user, auth_header, db_session):
@@ -182,7 +182,7 @@ def test_approve_not_found(client, make_user, auth_header):
     assert resp.status_code == 404
 
 
-def test_approve_requires_dev(client, make_user, auth_header, db_session):
+def test_approve_allows_manager(client, make_user, auth_header, db_session):
     manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
     _, proposal = _make_proposal(db_session)
 
@@ -190,7 +190,7 @@ def test_approve_requires_dev(client, make_user, auth_header, db_session):
         f"/schedule-proposals/{proposal.proposal_id}/approve", headers=auth_header(manager)
     )
 
-    assert resp.status_code == 403
+    assert resp.status_code == 200
 
 
 def test_reject_does_not_create_schedule(client, make_user, auth_header, db_session):

@@ -150,7 +150,7 @@ export function AllTeamsTab({ onSelect }: AllTeamsTabProps) {
       ) : teams.length === 0 ? (
         <p className="p-4 text-sm text-neutral-400">팀이 없습니다.</p>
       ) : (
-        <ul className="flex flex-col gap-0.5 p-2">
+        <ul className="flex flex-col gap-1.5 p-2">
           {teams.map((team) => {
             const members = membersByTeam[team.team_id]
             const isMember = members?.some((m) => m.user_id === user?.user_id) ?? false
@@ -159,7 +159,7 @@ export function AllTeamsTab({ onSelect }: AllTeamsTabProps) {
                 <button
                   type="button"
                   onClick={() => void toggleTeam(team)}
-                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm font-medium text-kakao-black hover:bg-neutral-100"
+                  className="flex w-full items-center justify-between rounded-lg border border-neutral-200 px-2.5 py-2 text-left text-sm font-medium text-kakao-black hover:bg-neutral-100"
                 >
                   <span>{team.name}</span>
                   <span className="text-xs text-neutral-400">{expandedTeamId === team.team_id ? '▲' : '▼'}</span>

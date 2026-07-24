@@ -51,6 +51,12 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
       list.push(s)
       map.set(key, list)
     }
+    for (const list of map.values()) {
+      list.sort((a, b) => {
+        if (a.kind !== b.kind) return a.kind === 'shared' ? -1 : 1
+        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+      })
+    }
     return map
   }, [schedules])
 
@@ -93,7 +99,7 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
   const isOwnCalendar = !studentId || studentId === user?.user_id
 
   return (
-    <div className="mx-auto max-w-5xl p-6">
+    <div className="mx-auto max-w-6xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
@@ -103,7 +109,7 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
           >
             ◀
           </button>
-          <h2 className="min-w-32 text-center text-lg font-bold text-kakao-black">
+          <h2 className="min-w-36 text-center text-xl font-bold text-kakao-black">
             {year}년 {month}월
           </h2>
           <button
@@ -129,7 +135,7 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
         {WEEKDAYS.map((w) => (
           <div
             key={w}
-            className="border-b border-neutral-200 bg-neutral-50 py-2 text-center text-xs font-medium text-neutral-500"
+            className="border-b border-neutral-200 bg-neutral-50 py-2.5 text-center text-sm font-medium text-neutral-500"
           >
             {w}
           </div>
@@ -137,7 +143,7 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
         {grid.map(({ date, inCurrentMonth }) => {
           const key = formatDateKey(date)
           const daySchedules = schedulesByDay.get(key) ?? []
-          const visible = daySchedules.slice(0, 4)
+          const visible = daySchedules.slice(0, 5)
           const overflowCount = daySchedules.length - visible.length
           const isToday = isSameDay(date, today)
 
@@ -145,25 +151,25 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
             <div
               key={key}
               onClick={() => setSelectedDate(date)}
-              className={`flex min-h-24 cursor-pointer flex-col items-stretch gap-1 border-b border-r border-neutral-100 p-1.5 text-left last:border-r-0 hover:bg-neutral-50 ${
+              className={`flex min-h-36 cursor-pointer flex-col items-stretch gap-1.5 border-b border-r border-neutral-100 p-2 text-left last:border-r-0 hover:bg-neutral-50 ${
                 inCurrentMonth ? 'bg-white' : 'bg-neutral-50 text-neutral-300'
               }`}
             >
               <span
-                className={`text-xs ${
+                className={`text-sm ${
                   isToday
-                    ? 'flex h-5 w-5 items-center justify-center rounded-full bg-kakao-yellow font-bold text-kakao-black'
+                    ? 'flex h-6 w-6 items-center justify-center rounded-full bg-kakao-yellow font-bold text-kakao-black'
                     : ''
                 }`}
               >
                 {date.getDate()}
               </span>
-              <div className="flex flex-1 flex-col gap-0.5">
+              <div className="flex flex-1 flex-col gap-1">
                 {visible.map((s) => (
                   <label
                     key={s.schedule_id}
                     onClick={(e) => e.stopPropagation()}
-                    className={`flex items-center gap-1 truncate rounded px-1 py-0.5 text-[11px] ${
+                    className={`flex items-center gap-1.5 truncate rounded px-1.5 py-1 text-xs ${
                       s.kind === 'shared'
                         ? 'bg-kakao-yellow/70 text-kakao-black'
                         : 'bg-neutral-200 text-neutral-700'
@@ -173,7 +179,7 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
                       type="checkbox"
                       checked={s.done}
                       onChange={() => void handleToggleDone(s)}
-                      className="h-2.5 w-2.5 shrink-0"
+                      className="h-3 w-3 shrink-0"
                     />
                     <span className={`truncate ${s.done ? 'line-through opacity-50' : ''}`}>
                       {s.title}
@@ -181,7 +187,7 @@ export function MonthCalendar({ studentId, studentLabel }: MonthCalendarProps) {
                   </label>
                 ))}
                 {overflowCount > 0 && (
-                  <span className="text-[11px] text-neutral-400">+{overflowCount}개 더보기</span>
+                  <span className="text-xs text-neutral-400">+{overflowCount}개 더보기</span>
                 )}
               </div>
             </div>
