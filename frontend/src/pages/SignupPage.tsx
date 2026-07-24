@@ -74,7 +74,7 @@ export function SignupPage() {
           />
           <input
             type="text"
-            placeholder="닉네임 (선택)"
+            placeholder="닉네임 (선택, 추천: 디스코드 닉네임)"
             value={nickName}
             onChange={(e) => setNickName(e.target.value)}
             className="rounded-lg border border-neutral-200 px-4 py-3 text-sm outline-none focus:border-kakao-yellow-dark"
