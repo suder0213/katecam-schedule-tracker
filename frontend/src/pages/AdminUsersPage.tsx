@@ -13,6 +13,12 @@ const PERMISSION_LABEL: Record<UserPermission, string> = {
 // dev 대상 권한 변경은 백엔드가 이 엔드포인트로는 막아둔다 — student/manager만 승격·강등 가능.
 const CHANGEABLE_PERMISSIONS: UserPermission[] = ['student', 'manager']
 
+const PERMISSION_ORDER: Record<UserPermission, number> = {
+  dev: 0,
+  manager: 1,
+  student: 2,
+}
+
 export function AdminUsersPage() {
   const { user: currentUser } = useAuth()
   const isDev = currentUser?.permission === 'dev'
@@ -35,7 +41,9 @@ export function AdminUsersPage() {
     setIsLoading(true)
     usersApi
       .listUsers()
-      .then(setUsers)
+      .then((data) =>
+        setUsers([...data].sort((a, b) => PERMISSION_ORDER[a.permission] - PERMISSION_ORDER[b.permission])),
+      )
       .catch(() => setError('불러오지 못했습니다.'))
       .finally(() => setIsLoading(false))
   }
