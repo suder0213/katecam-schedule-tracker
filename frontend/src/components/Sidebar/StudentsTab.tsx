@@ -34,13 +34,13 @@ export function StudentsTab({ onSelect }: StudentsTabProps) {
   if (students.length === 0) return <p className="p-4 text-sm text-neutral-400">학생이 없습니다.</p>
 
   return (
-    <ul className="flex flex-col gap-0.5 p-2">
+    <ul className="flex flex-col gap-1.5 p-2">
       {students.map((s) => (
         <li key={s.user_id}>
           <button
             type="button"
             onClick={() => onSelect(s)}
-            className="w-full rounded-lg px-2.5 py-2 text-left text-sm text-kakao-black hover:bg-neutral-100"
+            className="w-full rounded-lg border border-neutral-200 px-2.5 py-2 text-left text-sm text-kakao-black hover:bg-neutral-100"
           >
             {s.nick_name ?? s.email}
           </button>

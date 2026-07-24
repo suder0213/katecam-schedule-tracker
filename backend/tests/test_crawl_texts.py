@@ -64,7 +64,7 @@ def test_student_cannot_create_crawl_text(client, make_user, auth_header):
     assert resp.status_code == 403
 
 
-def test_manager_cannot_create_crawl_text(client, make_user, auth_header):
+def test_manager_can_create_crawl_text(client, make_user, auth_header):
     manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
 
     resp = client.post(
@@ -73,7 +73,7 @@ def test_manager_cannot_create_crawl_text(client, make_user, auth_header):
         headers=auth_header(manager),
     )
 
-    assert resp.status_code == 403
+    assert resp.status_code == 201
 
 
 def test_create_crawl_text_requires_auth(client):

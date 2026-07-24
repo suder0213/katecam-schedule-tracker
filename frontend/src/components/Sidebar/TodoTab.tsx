@@ -74,7 +74,7 @@ export function TodoTab() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span
-                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                  className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${
                     s.kind === 'shared'
                       ? 'bg-kakao-yellow text-kakao-black'
                       : 'bg-neutral-200 text-neutral-700'
@@ -83,9 +83,9 @@ export function TodoTab() {
                   {s.kind === 'shared' ? '공유' : '개인'}
                 </span>
                 <span className="flex-1 truncate text-kakao-black">{s.title}</span>
-                <span className="shrink-0 text-xs text-neutral-400">{formatDeadline(s.deadline)}</span>
               </div>
               {s.contents && <p className="mt-0.5 truncate text-xs text-neutral-500">{s.contents}</p>}
+              <span className="mt-0.5 block text-xs text-neutral-400">{formatDeadline(s.deadline)}</span>
             </div>
           </li>
         ))}

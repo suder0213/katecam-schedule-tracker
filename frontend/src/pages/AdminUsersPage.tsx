@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import * as usersApi from '../api/users'
+import { useAuth } from '../auth/AuthContext'
 import { AppHeader } from '../components/AppHeader'
 import type { User, UserPermission } from '../types/user'
 
@@ -13,10 +14,22 @@ const PERMISSION_LABEL: Record<UserPermission, string> = {
 const CHANGEABLE_PERMISSIONS: UserPermission[] = ['student', 'manager']
 
 export function AdminUsersPage() {
+  const { user: currentUser } = useAuth()
+  const isDev = currentUser?.permission === 'dev'
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pendingId, setPendingId] = useState<string | null>(null)
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
+  const [permissionDeniedId, setPermissionDeniedId] = useState<string | null>(null)
+
+  function handleDeleteClick(userId: string) {
+    if (isDev) {
+      setConfirmingDeleteId(userId)
+    } else {
+      setPermissionDeniedId(userId)
+    }
+  }
 
   function load() {
     setIsLoading(true)
@@ -50,6 +63,7 @@ export function AdminUsersPage() {
     setError(null)
     try {
       await usersApi.deleteUser(user.user_id)
+      setConfirmingDeleteId(null)
       load()
     } catch {
       setError('삭제에 실패했습니다.')
@@ -96,16 +110,48 @@ export function AdminUsersPage() {
                       <option value="manager">운영진</option>
                     </select>
                   )}
-                  {u.permission !== 'dev' && (
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(u)}
-                      disabled={pendingId === u.user_id}
-                      className="text-xs text-red-400 underline hover:text-red-600 disabled:opacity-50"
-                    >
-                      삭제
-                    </button>
-                  )}
+                  {u.permission !== 'dev' &&
+                    (confirmingDeleteId === u.user_id ? (
+                      <span className="flex items-center gap-1.5 text-xs">
+                        <span className="text-red-500">정말 삭제?</span>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingDeleteId(null)}
+                          disabled={pendingId === u.user_id}
+                          className="rounded border border-neutral-200 px-1.5 py-0.5 text-neutral-500 hover:bg-neutral-100 disabled:opacity-50"
+                        >
+                          취소
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDelete(u)}
+                          disabled={pendingId === u.user_id}
+                          className="rounded bg-red-500 px-1.5 py-0.5 font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+                        >
+                          삭제
+                        </button>
+                      </span>
+                    ) : permissionDeniedId === u.user_id ? (
+                      <span className="flex items-center gap-1.5 text-xs">
+                        <span className="text-red-500">dev 권한이 필요합니다</span>
+                        <button
+                          type="button"
+                          onClick={() => setPermissionDeniedId(null)}
+                          className="rounded border border-neutral-200 px-1.5 py-0.5 text-neutral-500 hover:bg-neutral-100"
+                        >
+                          확인
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteClick(u.user_id)}
+                        disabled={pendingId === u.user_id}
+                        className="text-xs text-red-400 underline hover:text-red-600 disabled:opacity-50"
+                      >
+                        삭제
+                      </button>
+                    ))}
                 </div>
               </li>
             ))}

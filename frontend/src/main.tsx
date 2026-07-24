@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
-import { DevRoute } from './auth/DevRoute'
+import { ManagerRoute } from './auth/ManagerRoute'
 import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
 // Email verification is disabled for MVP (see backend/app/api/routes/auth.py)
@@ -23,7 +23,7 @@ createRoot(document.getElementById('root')!).render(
           {/* <Route path="/verify" element={<VerifyEmailPage />} /> */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardPage />} />
-            <Route element={<DevRoute />}>
+            <Route element={<ManagerRoute />}>
               <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/agent" element={<AgentReviewPage />} />
             </Route>

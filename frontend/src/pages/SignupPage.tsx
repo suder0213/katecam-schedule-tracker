@@ -60,7 +60,7 @@ export function SignupPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
-        <h1 className="mb-1 text-center text-2xl font-bold text-kakao-black">카테캠 주간 트래커</h1>
+        <h1 className="mb-1 text-center text-2xl font-bold text-kakao-black">🍪 카테캠 일정 트래커</h1>
         <p className="mb-6 text-center text-sm text-neutral-500">회원가입</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">

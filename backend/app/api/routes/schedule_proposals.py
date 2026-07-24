@@ -16,7 +16,7 @@ router = APIRouter(prefix="/schedule-proposals", tags=["schedule-proposals"])
 def list_schedule_proposals(
     raw_text_id: uuid.UUID | None = Query(default=None),
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.DEV)),
+    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
 ) -> list[ScheduleProposal]:
     query = db.query(ScheduleProposal)
     if raw_text_id is not None:
@@ -30,7 +30,7 @@ def update_schedule_proposal(
     proposal_id: uuid.UUID,
     payload: ScheduleProposalUpdate,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.DEV)),
+    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
 ) -> ScheduleProposal:
     proposal = db.get(ScheduleProposal, proposal_id)
     if proposal is None:
@@ -52,7 +52,7 @@ def update_schedule_proposal(
 def approve_schedule_proposal(
     proposal_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.DEV)),
+    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
 ) -> ScheduleProposal:
     proposal = db.get(ScheduleProposal, proposal_id)
     if proposal is None:
@@ -87,7 +87,7 @@ def approve_schedule_proposal(
 def reject_schedule_proposal(
     proposal_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.DEV)),
+    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
 ) -> ScheduleProposal:
     proposal = db.get(ScheduleProposal, proposal_id)
     if proposal is None:

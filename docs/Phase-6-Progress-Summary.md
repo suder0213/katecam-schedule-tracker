@@ -11,6 +11,7 @@
 | nginx 리버스 프록시 + 정적 서빙 | `nginx/Dockerfile`(멀티스테이지: frontend `npm run build` → nginx 이미지에 정적 파일 포함), `nginx/nginx.conf`(80은 443으로 리다이렉트, 443이 `/auth` 등 API 경로는 backend로 프록시하고 나머지는 SPA 정적 서빙), `nginx/snippets/proxy.conf`(공통 프록시 헤더) |
 | 6-3 환경변수/시크릿 | `backend/.env`는 EC2에만 생성(git 미포함 재확인). 로컬 `.env`와 달리 `DATABASE_URL`을 `db:5432`(컨테이너 서비스명)로, `JWT_SECRET`을 `openssl rand -hex 32`로 새로 발급한 값으로 교체 |
 | 6-4 HTTPS | Let's Encrypt(certbot) + webroot 방식으로 `suderhome.com` 인증서 발급, 이후 본 스택 기동 |
+| 6-5 CI/CD (계획 외 추가) | `.github/workflows/ci.yml`에 `deploy` job 추가 — `main` push 후 기존 backend/frontend/docker-compose CI가 전부 통과해야 실행(`needs`), `appleboy/ssh-action`으로 EC2에 SSH 접속해 `git pull` + `docker compose -f docker-compose.prod.yml up -d --build` + `alembic upgrade head` 자동 실행. EC2 접속 정보(`EC2_HOST`/`EC2_USER`/`EC2_SSH_KEY`)는 GitHub repo secret으로 등록 |
 
 ## 원 계획 대비 변경된 결정사항
 
@@ -33,9 +34,10 @@
 
 ## 테스트 현황
 
-- 백엔드: **130 passed, 3 skipped**(rate limiting 기본 비활성화로 인한 의도적 스킵), 실패 0 — venv 재정비 후 기준선 유지 확인
-- 실브라우저로 `https://suderhome.com`에서 회원가입~로그인~계정 정상 동작 확인
+- 백엔드: **136 passed, 3 skipped**(rate limiting 기본 비활성화로 인한 의도적 스킵), 실패 0
+- 실브라우저로 `https://suderhome.com`에서 회원가입~로그인~계정, 팀 생성/가입/탈퇴/삭제 정상 동작 확인
+- CI/CD: PR #4 병합으로 `deploy` job까지 포함한 전체 파이프라인을 실제로 1회 통과시켜 검증(배포 후 `https://suderhome.com` 200 응답 확인)
 
 ## 현재 상태
 
-Phase 6(6-1~6-4) 배포 완료. `https://suderhome.com`에서 실서비스 운영 중 — HTTPS 적용, 기존 탄력적 IP/DNS 재사용, db 포함 전체 스택이 단일 EC2 위 Docker Compose로 구동됨.
+Phase 6(6-1~6-5) 배포 및 CI/CD 구축 완료. `https://suderhome.com`에서 실서비스 운영 중 — HTTPS 적용, 기존 탄력적 IP/DNS 재사용, db 포함 전체 스택이 단일 EC2 위 Docker Compose로 구동되며, `main` push 시 GitHub Actions가 자동으로 재배포함.
