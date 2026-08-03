@@ -52,7 +52,7 @@ def test_notion_with_channel_rejected(client, make_user, auth_header):
     assert resp.status_code == 422
 
 
-def test_student_cannot_create_crawl_text(client, make_user, auth_header):
+def test_student_can_create_crawl_text(client, make_user, auth_header):
     student = make_user("student@katecam.dev", UserPermission.STUDENT)
 
     resp = client.post(
@@ -61,7 +61,8 @@ def test_student_cannot_create_crawl_text(client, make_user, auth_header):
         headers=auth_header(student),
     )
 
-    assert resp.status_code == 403
+    assert resp.status_code == 201
+    assert resp.json()["created_by"]["user_id"] == str(student.user_id)
 
 
 def test_manager_can_create_crawl_text(client, make_user, auth_header):

@@ -23,9 +23,9 @@ createRoot(document.getElementById('root')!).render(
           {/* <Route path="/verify" element={<VerifyEmailPage />} /> */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/admin/agent" element={<AgentReviewPage />} />
             <Route element={<ManagerRoute />}>
               <Route path="/admin/users" element={<AdminUsersPage />} />
-              <Route path="/admin/agent" element={<AgentReviewPage />} />
             </Route>
           </Route>
         </Routes>

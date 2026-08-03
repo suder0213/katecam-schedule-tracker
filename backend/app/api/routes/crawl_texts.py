@@ -3,11 +3,11 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, require_permission
+from app.api.deps import get_current_user, get_db
 from app.core.agent import AgentParseError, analyze_crawl_text
 from app.models.crawl_text import CrawlText
 from app.models.schedule_proposal import ScheduleProposal
-from app.models.user import UserPermission
+from app.models.user import User
 from app.schemas.crawl_text import CrawlTextCreate, CrawlTextResponse
 from app.schemas.schedule_proposal import ScheduleProposalResponse
 
@@ -18,12 +18,13 @@ router = APIRouter(prefix="/crawl-texts", tags=["crawl-texts"])
 def create_crawl_text(
     payload: CrawlTextCreate,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
+    current_user: User = Depends(get_current_user),
 ) -> CrawlText:
     crawl_text = CrawlText(
         source=payload.source,
         channel=payload.channel,
         raw_text=payload.raw_text,
+        created_by_id=current_user.user_id,
     )
     db.add(crawl_text)
     db.commit()
@@ -36,7 +37,7 @@ def create_crawl_text(
 def read_crawl_text(
     raw_text_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
+    _current_user: User = Depends(get_current_user),
 ) -> CrawlText:
     crawl_text = db.get(CrawlText, raw_text_id)
     if crawl_text is None:
@@ -53,7 +54,7 @@ def read_crawl_text(
 def analyze_text(
     raw_text_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
+    _current_user: User = Depends(get_current_user),
 ) -> list[ScheduleProposal]:
     crawl_text = db.get(CrawlText, raw_text_id)
     if crawl_text is None:

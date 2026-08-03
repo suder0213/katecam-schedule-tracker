@@ -1,3 +1,5 @@
+import type { UserBrief } from './user'
+
 export type CrawlSource = 'notion' | 'discord'
 
 export interface CrawlText {
@@ -6,4 +8,5 @@ export interface CrawlText {
   channel: string | null
   raw_text: string
   created_at: string
+  created_by: UserBrief | null
 }

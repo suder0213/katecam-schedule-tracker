@@ -3,10 +3,10 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, require_permission
+from app.api.deps import get_current_user, get_db
 from app.models.schedule import Schedule, ScheduleKind
 from app.models.schedule_proposal import ProposalStatus, ScheduleProposal
-from app.models.user import UserPermission
+from app.models.user import User
 from app.schemas.schedule_proposal import ScheduleProposalResponse, ScheduleProposalUpdate
 
 router = APIRouter(prefix="/schedule-proposals", tags=["schedule-proposals"])
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/schedule-proposals", tags=["schedule-proposals"])
 def list_schedule_proposals(
     raw_text_id: uuid.UUID | None = Query(default=None),
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
+    _current_user: User = Depends(get_current_user),
 ) -> list[ScheduleProposal]:
     query = db.query(ScheduleProposal)
     if raw_text_id is not None:
@@ -30,7 +30,7 @@ def update_schedule_proposal(
     proposal_id: uuid.UUID,
     payload: ScheduleProposalUpdate,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
+    current_user: User = Depends(get_current_user),
 ) -> ScheduleProposal:
     proposal = db.get(ScheduleProposal, proposal_id)
     if proposal is None:
@@ -41,6 +41,7 @@ def update_schedule_proposal(
 
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(proposal, field, value)
+    proposal.updated_by_id = current_user.user_id
 
     db.commit()
     db.refresh(proposal)
@@ -52,7 +53,7 @@ def update_schedule_proposal(
 def approve_schedule_proposal(
     proposal_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
+    current_user: User = Depends(get_current_user),
 ) -> ScheduleProposal:
     proposal = db.get(ScheduleProposal, proposal_id)
     if proposal is None:
@@ -70,12 +71,14 @@ def approve_schedule_proposal(
     )
     db.add(schedule)
     proposal.status = ProposalStatus.APPROVED
+    proposal.decided_by_id = current_user.user_id
 
     try:
         db.commit()
     except Exception:
         db.rollback()
         proposal.status = ProposalStatus.PENDING
+        proposal.decided_by_id = None
         db.commit()
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Failed to apply proposal")
 
@@ -87,7 +90,7 @@ def approve_schedule_proposal(
 def reject_schedule_proposal(
     proposal_id: uuid.UUID,
     db: Session = Depends(get_db),
-    _current_user=Depends(require_permission(UserPermission.MANAGER, UserPermission.DEV)),
+    current_user: User = Depends(get_current_user),
 ) -> ScheduleProposal:
     proposal = db.get(ScheduleProposal, proposal_id)
     if proposal is None:
@@ -97,6 +100,7 @@ def reject_schedule_proposal(
         raise HTTPException(status.HTTP_409_CONFLICT, "Proposal already processed")
 
     proposal.status = ProposalStatus.REJECTED
+    proposal.decided_by_id = current_user.user_id
     db.commit()
     db.refresh(proposal)
 
