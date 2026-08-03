@@ -90,10 +90,13 @@ def test_analyze_nonexistent_text(client, make_user, auth_header):
     assert resp.status_code == 404
 
 
-def test_student_can_trigger_analyze(client, make_user, auth_header):
+def test_student_can_trigger_analyze(client, make_user, auth_header, monkeypatch):
     dev = make_user("dev@katecam.dev", UserPermission.DEV)
     student = make_user("student@katecam.dev", UserPermission.STUDENT)
     text = _create_text(client, auth_header, dev)
+
+    fake_model = _FakeChatModel(_FakeStructuredModel(result=SAMPLE_ITEMS))
+    monkeypatch.setattr("app.core.agent.chat_model", lambda: fake_model)
 
     resp = client.post(f"/crawl-texts/{text['raw_text_id']}/analyze", headers=auth_header(student))
 
