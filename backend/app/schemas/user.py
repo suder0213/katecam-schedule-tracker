@@ -1,6 +1,16 @@
+import uuid
+
 from pydantic import BaseModel, Field
 
 from app.models.user import UserPermission
+
+
+class UserBriefResponse(BaseModel):
+    user_id: uuid.UUID
+    nick_name: str | None
+    email: str
+
+    model_config = {"from_attributes": True}
 
 
 class UpdatePermissionRequest(BaseModel):

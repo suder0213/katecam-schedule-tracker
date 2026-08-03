@@ -4,6 +4,7 @@ import uuid
 from pydantic import BaseModel, model_validator
 
 from app.models.crawl_text import CrawlSource
+from app.schemas.user import UserBriefResponse
 
 
 class CrawlTextCreate(BaseModel):
@@ -26,5 +27,6 @@ class CrawlTextResponse(BaseModel):
     channel: str | None
     raw_text: str
     created_at: datetime.datetime
+    created_by: UserBriefResponse | None
 
     model_config = {"from_attributes": True}

@@ -44,13 +44,13 @@ def test_read_crawl_text_not_found(client, make_user, auth_header):
     assert resp.status_code == 404
 
 
-def test_read_crawl_text_requires_dev(client, make_user, auth_header, db_session):
+def test_student_can_read_crawl_text(client, make_user, auth_header, db_session):
     student = make_user("student@katecam.dev", UserPermission.STUDENT)
     crawl_text, _ = _make_proposal(db_session)
 
     resp = client.get(f"/crawl-texts/{crawl_text.raw_text_id}", headers=auth_header(student))
 
-    assert resp.status_code == 403
+    assert resp.status_code == 200
 
 
 def test_list_proposals_all(client, make_user, auth_header, db_session):
@@ -78,12 +78,12 @@ def test_list_proposals_filtered_by_raw_text_id(client, make_user, auth_header, 
     assert resp.json()[0]["title"] == "A"
 
 
-def test_list_proposals_requires_dev(client, make_user, auth_header):
+def test_student_can_list_proposals(client, make_user, auth_header):
     student = make_user("student@katecam.dev", UserPermission.STUDENT)
 
     resp = client.get("/schedule-proposals", headers=auth_header(student))
 
-    assert resp.status_code == 403
+    assert resp.status_code == 200
 
 
 def test_update_pending_proposal(client, make_user, auth_header, db_session):
@@ -102,6 +102,7 @@ def test_update_pending_proposal(client, make_user, auth_header, db_session):
     assert body["title"] == "수정된 제목"
     assert body["contents"] == "내용"
     assert body["deadline"] == new_deadline.isoformat().replace("+00:00", "Z")
+    assert body["updated_by"]["user_id"] == str(dev.user_id)
 
 
 def test_update_proposal_allows_manager(client, make_user, auth_header, db_session):
@@ -153,6 +154,7 @@ def test_approve_creates_shared_schedule(client, make_user, auth_header, db_sess
 
     assert resp.status_code == 200
     assert resp.json()["status"] == "approved"
+    assert resp.json()["decided_by"]["user_id"] == str(dev.user_id)
 
     created = db_session.query(Schedule).filter(Schedule.title == "기획서 제출").one()
     assert created.kind == ScheduleKind.SHARED
@@ -203,6 +205,7 @@ def test_reject_does_not_create_schedule(client, make_user, auth_header, db_sess
 
     assert resp.status_code == 200
     assert resp.json()["status"] == "rejected"
+    assert resp.json()["decided_by"]["user_id"] == str(dev.user_id)
 
     assert db_session.query(Schedule).filter(Schedule.title == "거절될 일정").first() is None
 

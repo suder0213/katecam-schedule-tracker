@@ -1,3 +1,5 @@
+import type { UserBrief } from './user'
+
 export type ProposalStatus = 'pending' | 'approved' | 'rejected'
 
 export interface ScheduleProposal {
@@ -9,4 +11,6 @@ export interface ScheduleProposal {
   status: ProposalStatus
   created_at: string
   updated_at: string
+  updated_by: UserBrief | null
+  decided_by: UserBrief | null
 }

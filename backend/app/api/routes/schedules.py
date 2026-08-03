@@ -41,16 +41,17 @@ def list_schedules(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[dict]:
-    if current_user.permission == UserPermission.STUDENT:
-        if student_id is not None and student_id != current_user.user_id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Insufficient permission")
+    if student_id is None:
         target_id = current_user.user_id
     else:
-        if student_id is None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "student_id is required")
         if db.get(User, student_id) is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
         target_id = student_id
+
+    # Anyone can look up anyone else's shared-schedule completion status, but a
+    # person's personal schedules are visible only on their own calendar.
+    is_own_calendar = target_id == current_user.user_id
+    visibility = _visible_to(target_id) if is_own_calendar else Schedule.kind == ScheduleKind.SHARED
 
     month_start = datetime.datetime(year, month, 1, tzinfo=datetime.timezone.utc)
     if month == 12:
@@ -63,7 +64,7 @@ def list_schedules(
         .filter(
             Schedule.deadline >= month_start,
             Schedule.deadline < month_end,
-            _visible_to(target_id),
+            visibility,
         )
         .order_by(Schedule.deadline)
         .all()

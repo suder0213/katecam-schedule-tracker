@@ -71,30 +71,51 @@ def test_student_excludes_other_students_personal_schedule(client, make_user, au
     assert resp.json() == []
 
 
-def test_student_cannot_specify_other_student_id(client, make_user, auth_header):
+def test_student_can_view_other_students_shared_schedule(client, make_user, auth_header):
+    manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
     student_a = make_user("student-a@katecam.dev", UserPermission.STUDENT)
     student_b = make_user("student-b@katecam.dev", UserPermission.STUDENT)
+    _create_shared(client, auth_header, manager)
 
     resp = client.get(
         f"/schedules?year={YEAR}&month={MONTH}&student_id={student_b.user_id}",
         headers=auth_header(student_a),
     )
 
-    assert resp.status_code == 403
+    assert resp.status_code == 200
+    kinds = {s["kind"] for s in resp.json()}
+    assert kinds == {"shared"}
 
 
-def test_manager_requires_student_id(client, make_user, auth_header):
+def test_viewing_others_calendar_hides_their_personal_schedule(client, make_user, auth_header):
+    student_a = make_user("student-a@katecam.dev", UserPermission.STUDENT)
+    student_b = make_user("student-b@katecam.dev", UserPermission.STUDENT)
+    _create_personal(client, auth_header, student_b)
+
+    resp = client.get(
+        f"/schedules?year={YEAR}&month={MONTH}&student_id={student_b.user_id}",
+        headers=auth_header(student_a),
+    )
+
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+def test_student_id_defaults_to_self(client, make_user, auth_header):
     manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
+    _create_personal(client, auth_header, manager)
 
     resp = client.get(f"/schedules?year={YEAR}&month={MONTH}", headers=auth_header(manager))
 
-    assert resp.status_code == 400
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["owner_id"] == str(manager.user_id)
 
 
-def test_manager_can_view_any_students_calendar(client, make_user, auth_header):
+def test_manager_can_view_any_students_shared_schedule(client, make_user, auth_header):
     manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
     student = make_user("student@katecam.dev", UserPermission.STUDENT)
-    _create_personal(client, auth_header, student)
+    _create_shared(client, auth_header, manager)
 
     resp = client.get(
         f"/schedules?year={YEAR}&month={MONTH}&student_id={student.user_id}",
@@ -103,10 +124,10 @@ def test_manager_can_view_any_students_calendar(client, make_user, auth_header):
 
     assert resp.status_code == 200
     assert len(resp.json()) == 1
-    assert resp.json()[0]["owner_id"] == str(student.user_id)
+    assert resp.json()[0]["kind"] == "shared"
 
 
-def test_manager_student_id_not_found(client, make_user, auth_header):
+def test_student_id_not_found(client, make_user, auth_header):
     manager = make_user("manager@katecam.dev", UserPermission.MANAGER)
 
     resp = client.get(

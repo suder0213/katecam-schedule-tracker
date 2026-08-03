@@ -4,6 +4,7 @@ import uuid
 from pydantic import BaseModel
 
 from app.models.schedule_proposal import ProposalStatus
+from app.schemas.user import UserBriefResponse
 
 
 class ScheduleProposalUpdate(BaseModel):
@@ -21,5 +22,7 @@ class ScheduleProposalResponse(BaseModel):
     status: ProposalStatus
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    updated_by: UserBriefResponse | None
+    decided_by: UserBriefResponse | None
 
     model_config = {"from_attributes": True}

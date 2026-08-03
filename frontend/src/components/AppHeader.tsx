@@ -21,7 +21,7 @@ export function AppHeader() {
     navigate('/login', { replace: true })
   }
 
-  function handleAdminLinkClick(e: MouseEvent) {
+  function handleUsersLinkClick(e: MouseEvent) {
     if (!canAccessAdmin) {
       e.preventDefault()
       setShowPermissionAlert(true)
@@ -36,10 +36,10 @@ export function AppHeader() {
         </Link>
         {user && (
           <nav className="flex items-center gap-3 text-sm font-medium text-kakao-black">
-            <Link to="/admin/users" onClick={handleAdminLinkClick} className="hover:underline">
+            <Link to="/admin/users" onClick={handleUsersLinkClick} className="hover:underline">
               계정 관리
             </Link>
-            <Link to="/admin/agent" onClick={handleAdminLinkClick} className="hover:underline">
+            <Link to="/admin/agent" className="hover:underline">
               Agent 검토
             </Link>
           </nav>

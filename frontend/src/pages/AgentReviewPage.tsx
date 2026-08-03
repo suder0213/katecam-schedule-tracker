@@ -3,6 +3,12 @@ import * as agentApi from '../api/agent'
 import { AppHeader } from '../components/AppHeader'
 import type { CrawlSource, CrawlText } from '../types/crawlText'
 import type { ScheduleProposal } from '../types/scheduleProposal'
+import type { UserBrief } from '../types/user'
+
+function actorName(actor: UserBrief | null): string | null {
+  if (!actor) return null
+  return actor.nick_name ?? actor.email
+}
 
 const STATUS_LABEL: Record<ScheduleProposal['status'], string> = {
   pending: '대기중',
@@ -239,9 +245,14 @@ export function AgentReviewPage() {
         <div className="flex flex-col gap-4">
           {groups.map(([rawTextId, group]) => (
             <div key={rawTextId} className="rounded-xl border border-neutral-200 bg-white p-4">
-              <p className="mb-3 whitespace-pre-wrap rounded-lg bg-neutral-50 p-3 text-xs text-neutral-500">
+              <p className="mb-1 whitespace-pre-wrap rounded-lg bg-neutral-50 p-3 text-xs text-neutral-500">
                 {crawlTexts[rawTextId]?.raw_text ?? '원문 불러오는 중...'}
               </p>
+              {actorName(crawlTexts[rawTextId]?.created_by ?? null) && (
+                <p className="mb-3 text-xs text-neutral-400">
+                  제출: {actorName(crawlTexts[rawTextId]?.created_by ?? null)}
+                </p>
+              )}
               <ul className="flex flex-col gap-2">
                 {group.map((p) =>
                   editingId === p.proposal_id ? (
@@ -303,6 +314,14 @@ export function AgentReviewPage() {
                         <p className="font-medium text-kakao-black">{p.title}</p>
                         <p className="text-xs text-neutral-500">{p.contents}</p>
                         <p className="text-xs text-neutral-400">{formatDeadline(p.deadline)}</p>
+                        {p.status !== 'pending' && actorName(p.decided_by) && (
+                          <p className="text-xs text-neutral-400">
+                            {p.status === 'approved' ? '승인' : '거절'}: {actorName(p.decided_by)}
+                          </p>
+                        )}
+                        {p.status === 'pending' && actorName(p.updated_by) && (
+                          <p className="text-xs text-neutral-400">수정: {actorName(p.updated_by)}</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <span
